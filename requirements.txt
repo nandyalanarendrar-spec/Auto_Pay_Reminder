@@ -1,0 +1,13 @@
+# Autopay Guard Python Backend Dependencies
+fastapi>=0.112.0
+uvicorn>=0.30.0
+sqlalchemy>=2.0.0
+python-dotenv>=1.0.1
+pydantic[email]>=2.8.0
+email-validator>=2.0.0
+psycopg2-binary>=2.9.0
+supabase>=2.7.0
+google-genai>=0.1.0
+requests>=2.32.0
+pandas>=2.2.0
+faker>=26.0.0

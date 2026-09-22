@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#080F1F] text-slate-100 font-sans antialiased min-h-screen overflow-x-hidden;
+    background-color: #080F1F;
+    background-image: 
+      radial-gradient(at 0% 25%, rgba(255, 0, 127, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 75%, rgba(155, 28, 255, 0.15) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(6, 182, 212, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+/* Glassmorphism Frosted Container (Matching Photo 1) */
+.glass-container {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(255, 0, 127, 0.12);
+}
+
+.glass-card-dark {
+  background: rgba(18, 25, 43, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.glass-card-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-hover:hover {
+  background: rgba(26, 36, 61, 0.85);
+  border-color: rgba(155, 28, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px -10px rgba(155, 28, 255, 0.2);
+}
+
+/* Primary Magenta -> Purple Gradient Button */
+.btn-gradient-primary {
+  background: linear-gradient(90deg, #ff007f 0%, #9b1cff 100%);
+  box-shadow: 0 8px 25px -4px rgba(255, 0, 127, 0.4);
+}
+
+.btn-gradient-primary:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 30px rgba(255, 0, 127, 0.6);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080F1F;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ff007f;
+}

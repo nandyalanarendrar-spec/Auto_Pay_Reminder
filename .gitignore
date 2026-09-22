@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+**/node_modules/
+mobile/node_modules/
+
+# Python Virtual Environments & Caches
+myproject/
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Environment & Secret files
+.env
+*.pem
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temp Scratch files
+scratch/
+audit_logs.json
+device_tokens.json
+google_tokens.json
+firebase_service_account.json
+
+# Build Outputs
+dist/
+build/
+mobile/build/

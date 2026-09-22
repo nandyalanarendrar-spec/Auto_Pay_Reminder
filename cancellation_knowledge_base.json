@@ -1,0 +1,157 @@
+{
+  "netflix": {
+    "merchant_name": "Netflix India",
+    "aliases": ["netflix", "net flix", "netflix.com"],
+    "official_url": "https://www.netflix.com/youraccount",
+    "support_contact": "https://help.netflix.com",
+    "steps": [
+      "1. Open netflix.com or the Netflix app and log in to your account.",
+      "2. Click your Profile icon at the top-right corner and select 'Account'.",
+      "3. Under the 'Membership & Billing' section, click the blue 'Cancel Membership' button.",
+      "4. Click 'Finish Cancellation' to confirm.",
+      "5. Your access will remain active until the end of your current billing period."
+    ]
+  },
+  "spotify": {
+    "merchant_name": "Spotify India",
+    "aliases": ["spotify", "spotify premium", "spotify music"],
+    "official_url": "https://www.spotify.com/account",
+    "support_contact": "https://support.spotify.com",
+    "steps": [
+      "1. Go to spotify.com/account on your web browser and log in.",
+      "2. Under 'Your plan', click 'Change plan'.",
+      "3. Scroll down to 'Spotify Free' and click 'Cancel Premium'.",
+      "4. Click 'Yes, cancel' to confirm cancellation.",
+      "5. You will retain Premium features until your next billing cycle date."
+    ]
+  },
+  "amazon_prime": {
+    "merchant_name": "Amazon Prime Video India",
+    "aliases": ["amazon prime", "prime video", "amazon prime video", "prime"],
+    "official_url": "https://www.amazon.in/mc/manage",
+    "support_contact": "https://www.amazon.in/gp/help/customer/display.html",
+    "steps": [
+      "1. Log in to Amazon.in on your web browser.",
+      "2. Hover over 'Account & Lists' at top right and select 'Your Prime Membership'.",
+      "3. Click 'Manage Membership' (top right section).",
+      "4. Click 'End Membership and Benefits'.",
+      "5. Confirm by selecting 'Continue to Cancel' and then 'Cancel Membership'."
+    ]
+  },
+  "hotstar": {
+    "merchant_name": "Disney+ Hotstar India",
+    "aliases": ["hotstar", "disney hotstar", "disney+ hotstar", "jio hotstar"],
+    "official_url": "https://www.hotstar.com/in/subscribe/my-account",
+    "support_contact": "https://help.hotstar.com",
+    "steps": [
+      "1. Open Disney+ Hotstar website or app and log in with your registered phone number.",
+      "2. Go to 'My Account' or click your profile avatar.",
+      "3. Select 'Subscription Details'.",
+      "4. Click 'Cancel Subscription' or 'Turn off Auto-Renewal'.",
+      "5. Confirm your cancellation when prompted."
+    ]
+  },
+  "youtube_premium": {
+    "merchant_name": "YouTube Premium",
+    "aliases": ["youtube premium", "yt premium", "youtube music", "youtube"],
+    "official_url": "https://www.youtube.com/paid_memberships",
+    "support_contact": "https://support.google.com/youtube",
+    "steps": [
+      "1. Open youtube.com or the YouTube app and tap your profile picture.",
+      "2. Select 'Purchases and memberships'.",
+      "3. Tap on 'Individual membership' or 'Family membership'.",
+      "4. Select 'Deactivate' or 'Cancel membership'.",
+      "5. Select your reason for leaving and click 'Continue to cancel'."
+    ]
+  },
+  "swiggy_one": {
+    "merchant_name": "Swiggy One Membership",
+    "aliases": ["swiggy", "swiggy one", "swiggy super", "swiggy.in"],
+    "official_url": "https://www.swiggy.com/my-account",
+    "support_contact": "support@swiggy.in",
+    "steps": [
+      "1. Open the Swiggy Mobile App.",
+      "2. Go to the 'Account' tab at the bottom right.",
+      "3. Tap on 'Swiggy One Membership'.",
+      "4. Scroll down and select 'Manage Membership'.",
+      "5. Toggle off 'Auto-Renewal' or tap 'Cancel Subscription'."
+    ]
+  },
+  "zomato_gold": {
+    "merchant_name": "Zomato Gold",
+    "aliases": ["zomato", "zomato gold", "zomato pro"],
+    "official_url": "https://www.zomato.com",
+    "support_contact": "support@zomato.com",
+    "steps": [
+      "1. Open the Zomato Mobile App.",
+      "2. Tap your profile picture at the top right corner.",
+      "3. Select 'Zomato Gold' membership banner.",
+      "4. Scroll down to membership settings and select 'Manage Plan'.",
+      "5. Select 'Cancel Membership' / Disable Auto-Renewal."
+    ]
+  },
+  "jiocinema": {
+    "merchant_name": "JioCinema Premium",
+    "aliases": ["jiocinema", "jio cinema", "jiocinema premium", "jio tv"],
+    "official_url": "https://www.jiocinema.com/account",
+    "support_contact": "help@jiocinema.com",
+    "steps": [
+      "1. Open jiocinema.com or the JioCinema App and log in.",
+      "2. Click the Profile / More icon.",
+      "3. Select 'My Subscription' or 'Account'.",
+      "4. Click 'Cancel Subscription'.",
+      "5. Confirm cancellation when prompted."
+    ]
+  },
+  "sonyliv": {
+    "merchant_name": "SonyLIV Premium",
+    "aliases": ["sonyliv", "sony liv", "sony liv premium"],
+    "official_url": "https://www.sonyliv.com/subscription",
+    "support_contact": "support@sonyliv.com",
+    "steps": [
+      "1. Open sonyliv.com or SonyLIV app and sign in.",
+      "2. Go to 'My Account' or profile settings.",
+      "3. Select 'Active Subscriptions'.",
+      "4. Click 'Unsubscribe' or 'Cancel Auto-Renewal'.",
+      "5. Follow the prompt to complete cancellation."
+    ]
+  },
+  "zee5": {
+    "merchant_name": "ZEE5 Premium",
+    "aliases": ["zee5", "zee 5", "zee5 premium"],
+    "official_url": "https://www.zee5.com/myaccount/subscription",
+    "support_contact": "support@zee5.com",
+    "steps": [
+      "1. Go to zee5.com or open ZEE5 app and log in.",
+      "2. Click 'My Account' $\\rightarrow$ 'My Subscription'.",
+      "3. Click 'Cancel Subscription'.",
+      "4. Confirm cancellation on the confirmation screen."
+    ]
+  },
+  "apple_subscriptions": {
+    "merchant_name": "Apple Services (Apple Music / iCloud)",
+    "aliases": ["apple music", "icloud", "apple tv", "apple one", "itunes"],
+    "official_url": "https://support.apple.com/HT202039",
+    "support_contact": "https://getsupport.apple.com",
+    "steps": [
+      "1. Open 'Settings' on your iPhone or iPad.",
+      "2. Tap your Name / Apple ID at the top.",
+      "3. Tap 'Subscriptions'.",
+      "4. Select the active subscription you want to cancel.",
+      "5. Tap 'Cancel Subscription' (or 'Cancel Free Trial') and confirm."
+    ]
+  },
+  "airtel": {
+    "merchant_name": "Airtel Black / Xtream",
+    "aliases": ["airtel", "airtel xtream", "airtel black", "airtel thanks"],
+    "official_url": "https://www.airtel.in/airtel-thanks-app",
+    "support_contact": "121 (Airtel Customer Care)",
+    "steps": [
+      "1. Open the Airtel Thanks Mobile App.",
+      "2. Tap on 'Services' or 'Manage'.",
+      "3. Select your active pack or digital subscription.",
+      "4. Tap 'Manage' $\\rightarrow$ 'Cancel Subscription / Auto-Renew'.",
+      "5. Alternatively, call 121 from your Airtel number to request cancellation."
+    ]
+  }
+}
