@@ -251,26 +251,6 @@ class FirebaseNotificationService:
         notifications_sent = []
         today_iso = date.today().isoformat()
 
-        # Check SMS preferences and phone number for user
-        sms_enabled = True
-        user_phone = None
-        try:
-            supabase = get_supabase_client()
-            s_res = supabase.from_("user_settings").select("sms_notifications_enabled, phone_number").eq("user_id", clean_uid).execute()
-            if s_res.data and len(s_res.data) > 0:
-                sms_enabled = bool(s_res.data[0].get("sms_notifications_enabled", True))
-                user_phone = s_res.data[0].get("phone_number")
-        except Exception:
-            pass
-
-        if not user_phone:
-            try:
-                u_res = supabase.from_("users").select("phone_number").eq("id", clean_uid).execute()
-                if u_res.data and len(u_res.data) > 0:
-                    user_phone = u_res.data[0].get("phone_number")
-            except Exception:
-                pass
-
         for item in due_alerts:
             try:
                 res = FirebaseNotificationService.send_push_notification(
@@ -288,35 +268,13 @@ class FirebaseNotificationService:
                     channel="fcm"
                 )
 
-                # --- STEP 4 & 5: GATED SMS DISPATCH WITH 24-HOUR RATE LIMIT GUARD ---
-                sms_status_note = "disabled_or_no_phone"
-                if sms_enabled and user_phone and item.get("days_remaining", 7) <= 1:
-                    from app.services.sms_service import send_sms
-                    sms_log_type = f"{item['notification_type']}_sms"
-                    
-                    # Rate-limit guard: Ensure max 1 SMS per subscription/EMI per day
-                    if not NotificationLogService.is_already_notified(clean_uid, item["type"], item["id"], sms_log_type, today_iso):
-                        sms_res = send_sms(user_phone, item["body"])
-                        sms_status_note = "sent" if sms_res.get("success") else str(sms_res.get("response") or sms_res.get("error"))
-                        
-                        # Log SMS dispatch event
-                        NotificationLogService.log_notification(
-                            user_id=clean_uid,
-                            entity_type=item["type"],
-                            entity_id=item["id"],
-                            notification_type=sms_log_type,
-                            channel="sms"
-                        )
-                        print(f"📱 SMS Alert attempt for {item['name']}: {sms_status_note}")
-
                 notifications_sent.append({
                     "type": item["type"].upper(),
                     "name": item["name"],
                     "amount": item["amount"],
                     "days_remaining": item["days_remaining"],
                     "urgency": item["urgency"],
-                    "fcm_status": res.get("message"),
-                    "sms_status": sms_status_note
+                    "fcm_status": res.get("message")
                 })
             except Exception as err:
                 print(f"Failed to dispatch notification for {item['name']}: {err}")

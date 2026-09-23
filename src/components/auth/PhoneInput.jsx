@@ -61,7 +61,7 @@ export default function PhoneInput({
       </div>
 
       <p className="text-[10px] text-[#7F7990]">
-        Used for SMS & WhatsApp payment reminder alerts
+        Used for WhatsApp & Push payment reminder alerts
       </p>
 
       {error && (

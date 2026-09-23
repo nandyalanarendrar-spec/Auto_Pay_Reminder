@@ -7,9 +7,10 @@ import EmailVerificationView from './EmailVerificationView';
 import ResetPasswordView from './ResetPasswordView';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 
-export default function AuthContainer({ onAuthenticated }) {
+export default function AuthContainer({ onAuthenticated, onPasswordResetStarted, onPasswordResetComplete }) {
   const [currentScreen, setCurrentScreen] = useState('login');
   const [userEmail, setUserEmail] = useState('');
+  const [isForgotPasswordFlow, setIsForgotPasswordFlow] = useState(false);
 
   // Handle Login submission
   const handleLogin = async ({ email, password }) => {
@@ -43,7 +44,7 @@ export default function AuthContainer({ onAuthenticated }) {
   const handleRegister = async ({ fullName, email, phoneNumber, countryCode, password }) => {
     setUserEmail(email);
 
-    // 1. Try FastAPI backend auto-confirm signup (Bypasses email confirmation delays & trigger errors!)
+    // 1. Try FastAPI backend signup (sends OTP email for verification)
     try {
       const res = await fetch('http://127.0.0.1:8000/api/v1/auth/signup', {
         method: 'POST',
@@ -58,7 +59,12 @@ export default function AuthContainer({ onAuthenticated }) {
 
       const resData = await res.json().catch(() => ({}));
       if (res.ok) {
-        return handleLogin({ email, password });
+        // Signup successful — now send 6-digit OTP email for verification
+        if (isSupabaseConfigured && supabase) {
+          await supabase.auth.signInWithOtp({ email });
+        }
+        setCurrentScreen('email_verification');
+        return;
       } else if (resData && resData.detail) {
         throw new Error(resData.detail);
       }
@@ -95,11 +101,51 @@ export default function AuthContainer({ onAuthenticated }) {
     }
   };
 
+  // Handle 6-Digit Email OTP Verification Submission
+  const handleVerifyEmailOtp = async (email, token) => {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email'
+      });
+      if (error) throw new Error(error.message);
+
+      // If user came from forgot password flow → show Set New Password screen
+      if (isForgotPasswordFlow) {
+        setCurrentScreen('reset_password');
+        return;
+      }
+
+      if (data.user && onAuthenticated) {
+        onAuthenticated(data.user);
+      }
+    } else {
+      if (onAuthenticated) {
+        onAuthenticated({ id: 'demo-user-1', email, user_metadata: { name: 'Verified User' } });
+      }
+    }
+  };
+
+  // Handle Set New Password (after forgot password OTP verification)
+  const handleSetNewPassword = async (newPassword) => {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw new Error(error.message);
+      // Sign out so user must login with new password
+      await supabase.auth.signOut();
+    }
+    setIsForgotPasswordFlow(false);
+    if (onPasswordResetComplete) onPasswordResetComplete();
+    setCurrentScreen('login');
+  };
+
   // Handle Forgot Password Request
   const handleForgotPassword = async (email) => {
     if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false }
       });
       if (error) throw new Error(error.message);
     }
@@ -140,12 +186,19 @@ export default function AuthContainer({ onAuthenticated }) {
         <ForgotPasswordView
           onResetRequested={handleForgotPassword}
           onNavigateLogin={() => setCurrentScreen('login')}
+          onOtpSent={(email) => {
+            setUserEmail(email);
+            setIsForgotPasswordFlow(true);
+            if (onPasswordResetStarted) onPasswordResetStarted();
+            setCurrentScreen('email_verification');
+          }}
         />
       )}
 
       {currentScreen === 'email_verification' && (
         <EmailVerificationView
           email={userEmail}
+          onVerifyOtp={handleVerifyEmailOtp}
           onResendEmail={handleForgotPassword}
           onNavigateLogin={() => setCurrentScreen('login')}
         />
@@ -153,6 +206,7 @@ export default function AuthContainer({ onAuthenticated }) {
 
       {currentScreen === 'reset_password' && (
         <ResetPasswordView
+          onUpdatePasswordSuccess={handleSetNewPassword}
           onNavigateLogin={() => setCurrentScreen('login')}
         />
       )}

@@ -34,6 +34,7 @@ const getAuthTokenForSync = async () => {
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [pendingPasswordReset, setPendingPasswordReset] = useState(false);
 
   // Subscriptions state fetched fresh from backend API
   const [subscriptions, setSubscriptions] = useState([]);
@@ -75,7 +76,10 @@ export default function App() {
     if (isSupabaseConfigured && supabase) {
       const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         if (session?.user) {
-          setCurrentUser(session.user);
+          // Don't auto-login if user is resetting their password
+          if (!pendingPasswordReset) {
+            setCurrentUser(session.user);
+          }
         } else {
           setCurrentUser(null);
         }
@@ -584,8 +588,12 @@ export default function App() {
     );
   }
 
-  if (!currentUser) {
-    return <AuthContainer onAuthenticated={(user) => setCurrentUser(user)} />;
+  if (!currentUser || pendingPasswordReset) {
+    return <AuthContainer
+      onAuthenticated={(user) => { setPendingPasswordReset(false); setCurrentUser(user); }}
+      onPasswordResetStarted={() => setPendingPasswordReset(true)}
+      onPasswordResetComplete={() => { setPendingPasswordReset(false); setCurrentUser(null); }}
+    />;
   }
 
   return (

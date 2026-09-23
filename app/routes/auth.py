@@ -9,34 +9,12 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/signup", response_model=dict, status_code=status.HTTP_201_CREATED)
 def signup(payload: UserSignup):
     """
-    Registers a new user using Supabase Auth, storing full name & phone_number,
-    and automatically confirming the email for instant access!
+    Registers a new user using Supabase Auth, storing full name & phone_number.
+    User must verify their email via 6-digit OTP before they can login.
     """
     supabase = get_supabase_client()
     try:
-        # Attempt auto-confirm signup via Supabase Admin API
-        try:
-            response = supabase.auth.admin.create_user({
-                "email": payload.email,
-                "password": payload.password,
-                "email_confirm": True,  # AUTO-CONFIRM USER IMMEDIATELY!
-                "user_metadata": {
-                    "name": payload.name or "",
-                    "phone_number": payload.phone_number or ""
-                }
-            })
-            if response and response.user:
-                AuditLoggerService.log_action(response.user.id, "USER_SIGNUP", details={"email": payload.email})
-                return {
-                    "message": "User registered & auto-confirmed successfully! You can login immediately.",
-                    "user_id": response.user.id,
-                    "email": response.user.email,
-                    "phone_number": payload.phone_number
-                }
-        except Exception as admin_err:
-            print("Admin signup fallback to standard signup:", admin_err)
-
-        # Standard signup fallback
+        # Standard signup — Supabase sends OTP email for verification
         response = supabase.auth.sign_up({
             "email": payload.email,
             "password": payload.password,
@@ -53,10 +31,11 @@ def signup(payload: UserSignup):
 
         AuditLoggerService.log_action(response.user.id, "USER_SIGNUP", details={"email": payload.email})
         return {
-            "message": "User registered successfully!",
+            "message": "Verification email sent! Please check your inbox for the 6-digit OTP code.",
             "user_id": response.user.id,
             "email": response.user.email,
-            "phone_number": payload.phone_number
+            "phone_number": payload.phone_number,
+            "requires_verification": True
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

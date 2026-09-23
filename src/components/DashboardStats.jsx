@@ -136,7 +136,7 @@ export default function DashboardStats({ subscriptions, onOpenAddModal, onToggle
             <div>
               <h4 className="text-lg font-extrabold text-white">Start Tracking</h4>
               <p className="text-xs text-slate-400 max-w-sm mx-auto mt-2 leading-relaxed">
-                Detect subscriptions from your SMS automatically or add them manually to manage your outgoings.
+                Detect subscriptions from your bank alerts automatically or add them manually to manage your outgoings.
               </p>
             </div>
 
@@ -146,7 +146,7 @@ export default function DashboardStats({ subscriptions, onOpenAddModal, onToggle
                 className="w-full py-3.5 px-4 rounded-2xl font-bold text-xs text-white btn-gradient-primary flex items-center justify-center space-x-2 shadow-lg"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>Auto-Detect via SMS</span>
+                <span>Auto-Detect Bank Alerts</span>
               </button>
 
               <button

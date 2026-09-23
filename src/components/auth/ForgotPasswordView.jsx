@@ -4,7 +4,7 @@ import InputField from './InputField';
 import PrimaryButton from './PrimaryButton';
 import { Mail, KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
-export default function ForgotPasswordView({ onResetRequested, onNavigateLogin }) {
+export default function ForgotPasswordView({ onResetRequested, onNavigateLogin, onOtpSent }) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -21,7 +21,11 @@ export default function ForgotPasswordView({ onResetRequested, onNavigateLogin }
     setIsLoading(true);
     try {
       await onResetRequested(email);
-      setIsSuccess(true);
+      if (onOtpSent) {
+        onOtpSent(email);
+      } else {
+        setIsSuccess(true);
+      }
     } catch (err) {
       setErrorMessage(err.message || 'Unable to send password reset email.');
     } finally {
