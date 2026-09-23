@@ -151,15 +151,34 @@ export default function AuthContainer({ onAuthenticated, onPasswordResetStarted,
     }
   };
 
-  // Handle Social Login Trigger
+  // Handle Social Login Trigger (Google / Social OAuth)
   const handleSocialLogin = async (provider) => {
     if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: provider
-      });
-      if (error) alert(`Social login note: ${error.message}`);
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: provider,
+          options: {
+            redirectTo: `${window.location.origin}`
+          }
+        });
+        if (error) {
+          throw new Error(error.message);
+        }
+      } catch (err) {
+        alert(`Google Login Note: ${err.message}\n\nMake sure Google Provider is enabled in your Supabase Dashboard (Authentication -> Providers -> Google).`);
+      }
     } else {
-      alert(`Social Login (${provider}) activated! (Configure OAuth in Supabase Dashboard)`);
+      // Demo Mock Mode: Instant Google Login simulation
+      if (onAuthenticated) {
+        onAuthenticated({
+          id: 'google-demo-user-123',
+          email: 'nandyalanarendrar@gmail.com',
+          user_metadata: {
+            full_name: 'Narendra (Google)',
+            avatar_url: 'https://lh3.googleusercontent.com/a/default-user'
+          }
+        });
+      }
     }
   };
 

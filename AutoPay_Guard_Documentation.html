@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoPay Guard — Comprehensive System Documentation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --secondary: #0f172a;
+            --accent: #10b981;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --bg-light: #f8fafc;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-dark);
+            background-color: #ffffff;
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        .header {
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin: 0;
+            font-weight: 400;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-top: 32px;
+            margin-bottom: 12px;
+            border-left: 4px solid var(--primary);
+            padding-left: 12px;
+        }
+
+        h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: var(--text-dark);
+        }
+
+        ul {
+            margin: 0 0 16px 0;
+            padding-left: 20px;
+        }
+
+        li {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        li b {
+            color: var(--secondary);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        th, td {
+            padding: 12px 14px;
+            text-align: left;
+            border: 1px solid var(--border);
+        }
+
+        th {
+            background-color: var(--primary);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--bg-light);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        .code-block {
+            background: #0f172a;
+            color: #38bdf8;
+            padding: 14px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 12px 0;
+        }
+
+        .print-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            float: right;
+            margin-bottom: 20px;
+        }
+
+        .print-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                max-width: 100%;
+            }
+            .print-btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <button class="print-btn" onclick="window.print()">🖨️ Save as PDF / Print</button>
+    
+    <div class="header">
+        <h1 class="title">🛡️ AutoPay Guard — Complete System Documentation</h1>
+        <p class="subtitle">Detailed Architecture, Workflows & Implemented Features Guide | Version 1.0</p>
+    </div>
+
+    <h2>1. Executive Summary</h2>
+    <p>
+        <b>AutoPay Guard</b> is an automated Subscription, Loan EMI, and Recurring Payment Tracker & Alert System. 
+        It safeguards users against unannounced auto-debits, unexpected credit card charges, trial expirations, and late payment penalties. 
+        Featuring multi-channel reminders (Email, Push, WhatsApp, Google Calendar) and strict GDPR data privacy compliance, it offers an end-to-end automated financial management solution.
+    </p>
+
+    <h2>2. System Architecture & Tech Stack</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Layer</th>
+                    <th>Technology Stack</th>
+                    <th>Responsibilities</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><b>Frontend UI</b></td>
+                    <td>React (Vite), Glassmorphism Dark UI, Lucide Icons</td>
+                    <td>Responsive Dashboard, Subscription/EMI Hub, Analytics, Auth Views.</td>
+                </tr>
+                <tr>
+                    <td><b>Backend API</b></td>
+                    <td>Python FastAPI, Uvicorn, Pydantic</td>
+                    <td>REST API endpoints, business logic execution, audit logging, GDPR handlers.</td>
+                </tr>
+                <tr>
+                    <td><b>Database & Auth</b></td>
+                    <td>Supabase PostgreSQL + Supabase Auth</td>
+                    <td>User identity, Row-Level Security (RLS) policies, encrypted storage.</td>
+                </tr>
+                <tr>
+                    <td><b>Email Engine</b></td>
+                    <td>Brevo Custom SMTP Relay</td>
+                    <td>High-deliverability 6-digit OTP codes for account verification & password reset.</td>
+                </tr>
+                <tr>
+                    <td><b>Alert Services</b></td>
+                    <td>Firebase FCM, Meta Cloud API, Google Calendar API</td>
+                    <td>Browser Push notifications, WhatsApp automated messages, Google Calendar event sync.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>3. Core Workflows & Implemented Features</h2>
+    
+    <h3>A. Authentication & Security Flow</h3>
+    <ul>
+        <li><b>Account Registration with 6-Digit Email OTP:</b> Users sign up with Name, Email, Phone, and Password. Registration automatically dispatches a 6-digit OTP via Brevo SMTP to verify user inbox.</li>
+        <li><b>Dual Login Options:</b> Supports both Email + Password login and Phone Number OTP login.</li>
+        <li><b>Password Recovery ('Forgot Password' Flow):</b> Enter Email → 6-Digit OTP sent to inbox → Enter OTP → Verified → Set New Password screen (no current password needed) → Instant password update.</li>
+        <li><b>Supabase Row-Level Security (RLS):</b> PostgreSQL RLS policies guarantee users exclusively query and update their own records.</li>
+    </ul>
+
+    <h3>B. Subscription & Loan EMI Management</h3>
+    <ul>
+        <li><b>Comprehensive Tracking:</b> Track Netflix, Spotify, AWS, Rent, Home Loans, Car EMIs, and Personal Loans.</li>
+        <li><b>Auto-Pay vs Manual Pay Modes:</b> Distinguishes between automatic credit/debit card debits and manual bank transfers.</li>
+        <li><b>Billing Cycle & Renewal Logic:</b> Supports Monthly, Quarterly, and Yearly cycles with precise upcoming due date calculation.</li>
+        <li><b>Financial Analytics:</b> Real-time monthly spend outlays, upcoming auto-debits in 7 days, and trial expiration warnings.</li>
+    </ul>
+
+    <h3>C. Multi-Channel Reminder & Alert Engine</h3>
+    <ul>
+        <li><b>Firebase Cloud Messaging (FCM):</b> Real-time web push notifications on desktop/mobile browsers.</li>
+        <li><b>WhatsApp Business Messaging:</b> Automated reminder alerts delivered directly to user's WhatsApp via Meta Cloud API.</li>
+        <li><b>Google Calendar Event Sync:</b> Automatic creation of Google Calendar event reminders on payment due dates.</li>
+        <li><b>Automated Daily Scheduler:</b> Background engine runs daily scans triggering alerts at T-3 days, T-1 day, and on the due date.</li>
+    </ul>
+
+    <h3>D. Audit Logging & GDPR Compliance</h3>
+    <ul>
+        <li><b>Audit Trail:</b> Internal <code>AuditLoggerService</code> records critical security events (<code>USER_SIGNUP</code>, <code>USER_LOGIN</code>, <code>PASSWORD_CHANGE</code>, <code>SUBSCRIPTION_CREATE</code>).</li>
+        <li><b>GDPR Data Portability:</b> Download full account data, subscriptions, EMIs, and logs as JSON.</li>
+        <li><b>GDPR Right to be Forgotten:</b> Permanently delete user profile and associated database records upon request.</li>
+    </ul>
+
+    <h2>4. Development Server Commands</h2>
+    <p><b>FastAPI Backend:</b></p>
+    <div class="code-block">uvicorn backend.main:app --reload --port 8000</div>
+    
+    <p><b>Vite Frontend:</b></p>
+    <div class="code-block">npm run dev</div>
+
+</div>
+
+</body>
+</html>
