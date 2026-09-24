@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Bell, ShieldAlert, CheckCircle2, Clock, X, Volume2, Power, AlertTriangle, Sparkles } from 'lucide-react';
 import { requestNotificationPermission, sendWebNotification } from '../utils/browserNotifications';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 export default function NotificationsCenterModal({
   isOpen,
   onClose,
   subscriptions = [],
   killSwitchActive = false,
-  userEmis = []
+  userEmis = [],
+  onOpenWhatsAppModal
 }) {
   const [browserPermission, setBrowserPermission] = useState(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -16,6 +18,7 @@ export default function NotificationsCenterModal({
     return 'default';
   });
   const [testSent, setTestSent] = useState(false);
+  const [waSent, setWaSent] = useState(false);
 
   if (!isOpen) return null;
 
@@ -32,6 +35,28 @@ export default function NotificationsCenterModal({
       body: "Instant desktop alerts enabled for upcoming renewals and autopay debits.",
       tag: `test-notif-${Date.now()}`
     });
+  };
+
+  const handleTestWhatsApp = async () => {
+    setWaSent(true);
+    setTimeout(() => setWaSent(false), 4000);
+    try {
+      let token = null;
+      if (isSupabaseConfigured && supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        token = session?.access_token;
+      }
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      await fetch('http://127.0.0.1:8000/api/v1/whatsapp/send-test', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({})
+      });
+    } catch (e) {
+      console.warn("WhatsApp test trigger note:", e);
+    }
   };
 
   // Generate real dynamic notification items from subscriptions & EMIs
@@ -119,30 +144,67 @@ export default function NotificationsCenterModal({
           </button>
         </div>
 
-        {/* Browser Push Permission Banner */}
-        <div className="p-4 bg-slate-950/90 border-b border-slate-800/80 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5 text-xs text-slate-300">
-            <Volume2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-            <div>
-              <span className="font-semibold block text-slate-200">Desktop Web Push</span>
-              <span className="text-[11px] text-slate-400">
-                Status: {browserPermission === 'granted' ? '🟢 Allowed' : browserPermission === 'denied' ? '🔴 Blocked in Browser' : '🟡 Not Enabled'}
-              </span>
+        {/* Channels Permission Bar */}
+        <div className="p-4 bg-slate-950/90 border-b border-slate-800/80 space-y-3">
+          {/* Desktop Web Push Row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5 text-xs text-slate-300">
+              <Volume2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <div>
+                <span className="font-semibold block text-slate-200">Desktop Web Push</span>
+                <span className="text-[11px] text-slate-400">
+                  Status: {browserPermission === 'granted' ? '🟢 Allowed' : browserPermission === 'denied' ? '🔴 Blocked in Browser' : '🟡 Not Enabled'}
+                </span>
+              </div>
             </div>
+
+            <button
+              onClick={handleEnableWebPush}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md ${
+                testSent
+                  ? 'bg-amber-500 text-slate-950 scale-105'
+                  : browserPermission === 'granted'
+                  ? 'bg-emerald-950 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-900'
+                  : 'bg-gradient-to-r from-amber-500 to-purple-600 text-white hover:opacity-90'
+              }`}
+            >
+              {testSent ? '🔔 Push Fired!' : browserPermission === 'granted' ? 'Test Push' : 'Enable Web Push'}
+            </button>
           </div>
 
-          <button
-            onClick={handleEnableWebPush}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md ${
-              testSent
-                ? 'bg-amber-500 text-slate-950 scale-105'
-                : browserPermission === 'granted'
-                ? 'bg-emerald-950 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-900'
-                : 'bg-gradient-to-r from-amber-500 to-purple-600 text-white hover:opacity-90'
-            }`}
-          >
-            {testSent ? '🔔 Test Fired!' : browserPermission === 'granted' ? 'Test Notification' : 'Enable Web Push'}
-          </button>
+          {/* WhatsApp Integration Row */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-800/60">
+            <div className="flex items-center space-x-2.5 text-xs text-slate-300">
+              <span className="text-base">📱</span>
+              <div>
+                <span className="font-semibold block text-slate-200">Meta WhatsApp Cloud API</span>
+                <span className="text-[11px] text-emerald-400">🟢 Direct Integration Active</span>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  onClose();
+                  if (onOpenWhatsAppModal) onOpenWhatsAppModal();
+                }}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md cursor-pointer transition-all flex items-center space-x-1"
+              >
+                <span>📲 Send 'Hi'</span>
+              </button>
+
+              <button
+                onClick={handleTestWhatsApp}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md border ${
+                  waSent
+                    ? 'bg-emerald-500 text-slate-950 border-emerald-400 scale-105'
+                    : 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/90'
+                }`}
+              >
+                {waSent ? '💬 WhatsApp Fired!' : 'Test Alert'}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Alerts List */}

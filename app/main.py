@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routes import health, auth, subscriptions, emis, mock_generator, analytics, dashboard, integrations, notifications, chatbot, admin, ai, reports
+from app.routes import health, auth, subscriptions, emis, mock_generator, analytics, dashboard, integrations, notifications, chatbot, admin, ai, reports, whatsapp
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -93,6 +93,7 @@ app.include_router(chatbot.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
+app.include_router(whatsapp.router, prefix="/api/v1")
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Sparkles, PlusCircle, Database, LogOut, User, FileText, Download, Calculator, Power, Bell } from 'lucide-react';
+import { ShieldCheck, Sparkles, PlusCircle, Database, LogOut, User, FileText, Download, Calculator, Power, Bell, MessageSquare } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 export default function Navbar({ 
@@ -12,7 +12,8 @@ export default function Navbar({
   onToggleKillSwitch,
   killSwitchActive,
   onOpenProfileModal,
-  onEnableNotifications
+  onEnableNotifications,
+  onOpenWhatsAppModal
 }) {
   const handleExport = async (format) => {
     const uid = currentUser?.id || 'default_user';
@@ -123,7 +124,18 @@ export default function Navbar({
             <span>Add Sub</span>
           </button>
 
-          {/* 7. Browser Web Notification Bell */}
+          {/* 7. WhatsApp Activation Button */}
+          <button
+            onClick={onOpenWhatsAppModal}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500/60 text-emerald-400 hover:text-emerald-300 transition-all cursor-pointer relative group"
+            title="Activate Meta WhatsApp Alerts (Send 'Hi')"
+          >
+            <MessageSquare className="w-4 h-4 group-hover:scale-110 transition-transform text-emerald-400" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full" />
+          </button>
+
+          {/* 8. Browser Web Notification Bell */}
           <button
             onClick={onEnableNotifications}
             className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/60 text-amber-400 hover:text-amber-300 transition-all cursor-pointer relative group"

@@ -15,4 +15,10 @@ class Settings:
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:8000/api/v1/integrations/google-calendar/callback")
 
+    # WhatsApp Meta Cloud API Configuration
+    WHATSAPP_PHONE_NUMBER_ID: str = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
+    WHATSAPP_ACCESS_TOKEN: str = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
+    WHATSAPP_BUSINESS_ACCOUNT_ID: str = os.getenv("WHATSAPP_BUSINESS_ACCOUNT_ID", "")
+    WHATSAPP_BUSINESS_PHONE_NUMBER: str = os.getenv("WHATSAPP_BUSINESS_PHONE_NUMBER", "15551911379")
+
 settings = Settings()

@@ -91,7 +91,8 @@ export default function AIChatDrawer({ isOpen, onClose, subscriptions }) {
         }
       } else {
         const total = subscriptions ? subscriptions.reduce((acc, s) => acc + (parseFloat(s.amount) || 0), 0) : 0;
-        replyText += `Your current total monthly expenditure across ${subscriptions ? subscriptions.length : 0} active subscriptions is ₹${total.toFixed(2)}. Ask me about renewals or cancellations!`;
+        const subList = subscriptions ? subscriptions.map((s, idx) => `• **${s.merchant_name || s.name}**: ₹${parseFloat(s.amount).toFixed(2)}/mo (${s.status === 'trial' || s.is_free_trial ? 'Free Trial' : 'Active'})`).join('\n') : 'No subscriptions found.';
+        replyText = `You currently have **${subscriptions ? subscriptions.length : 0} active subscriptions** totaling **₹${total.toFixed(2)}/mo**:\n\n${subList}\n\nAsk me about renewal dates or cancellation steps!`;
       }
 
       setMessages(prev => [...prev, { id: `bot-${Date.now()}`, sender: 'bot', text: replyText }]);

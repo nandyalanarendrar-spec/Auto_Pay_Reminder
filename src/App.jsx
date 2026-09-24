@@ -13,6 +13,8 @@ import UserProfileModal from './components/UserProfileModal';
 import NotificationsCenterModal from './components/NotificationsCenterModal';
 import AutopayCountdownModal from './components/AutopayCountdownModal';
 import NotificationPermissionBanner from './components/NotificationPermissionBanner';
+import PhoneCompletionModal from './components/PhoneCompletionModal';
+import WhatsAppActivationModal from './components/WhatsAppActivationModal';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { requestNotificationPermission, sendWebNotification, notifyUpcomingRenewals, fireDueReminderNotification } from './utils/browserNotifications';
 import { syncSubscriptionToCalendar, cancelSubscriptionCalendarEvent, syncEmiToCalendar, syncAllSubscriptionsToCalendar } from './utils/calendarSync';
@@ -52,8 +54,10 @@ export default function App() {
   const [isWhatIfOpen, setIsWhatIfOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
   const [selectedCountdownSub, setSelectedCountdownSub] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
 
   // Check Supabase session on mount
   useEffect(() => {
@@ -90,6 +94,17 @@ export default function App() {
       };
     }
   }, []);
+
+  // Prompt missing phone number for Google login / new users
+  useEffect(() => {
+    if (currentUser) {
+      const hasPhone = currentUser.user_metadata?.phone_number || currentUser.phone_number;
+      const isDismissed = sessionStorage.getItem('autopay_dismiss_phone_modal') === 'true';
+      if (!hasPhone && !isDismissed) {
+        setIsPhoneModalOpen(true);
+      }
+    }
+  }, [currentUser]);
 
   const [googleCalConnected, setGoogleCalConnected] = useState(true);
 
@@ -622,6 +637,7 @@ export default function App() {
         killSwitchActive={killSwitchActive}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onEnableNotifications={handleEnableNotifications}
+        onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -758,6 +774,10 @@ export default function App() {
         onClose={() => setIsProfileModalOpen(false)}
         currentUser={currentUser}
         onLogout={handleLogout}
+        onProfileUpdated={(updatedUser) => {
+          if (updatedUser) setCurrentUser(updatedUser);
+          showToast("✅ Profile updated! WhatsApp alerts will target your new mobile number.");
+        }}
         onClearData={() => {
           setSubscriptions([]);
           setUserEmis([]);
@@ -773,6 +793,7 @@ export default function App() {
         subscriptions={subscriptions}
         killSwitchActive={killSwitchActive}
         userEmis={userEmis}
+        onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
       />
 
       <AutopayCountdownModal
@@ -784,7 +805,35 @@ export default function App() {
         onDeleteSubscription={handleDeleteSubscription}
       />
 
+      <PhoneCompletionModal
+        isOpen={isPhoneModalOpen}
+        onClose={() => {
+          sessionStorage.setItem('autopay_dismiss_phone_modal', 'true');
+          setIsPhoneModalOpen(false);
+        }}
+        currentUser={currentUser}
+        onPhoneUpdated={(updatedUser) => {
+          setCurrentUser(updatedUser);
+          showToast("📱 Mobile number saved! Instant WhatsApp alerts enabled.");
+        }}
+      />
 
+      <WhatsAppActivationModal
+        isOpen={isWhatsAppModalOpen}
+        onClose={() => setIsWhatsAppModalOpen(false)}
+        currentUser={currentUser}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+      />
+
+      {/* Floating Bottom-Right WhatsApp Quick Activation Pill */}
+      <button
+        onClick={() => setIsWhatsAppModalOpen(true)}
+        className="fixed bottom-6 left-6 z-40 px-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/40 flex items-center space-x-2 transition-all hover:scale-105 cursor-pointer animate-pulse"
+        title="Activate WhatsApp Alerts (Meta 24h Rule)"
+      >
+        <span className="text-base">💬</span>
+        <span>Send 'Hi' on WhatsApp</span>
+      </button>
 
     </div>
   );

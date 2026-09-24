@@ -14,7 +14,7 @@ from app.services.chatbot_service import ChatbotService
 from app.services.mock_generator_service import MockGeneratorService
 
 # =====================================================================
-# 🤖 MULTI-AGENT ORCHESTRATION ENGINE WITH LIVE WEBSITE DATA INGESTION
+# 🤖 MULTI-AGENT ORCHESTRATION ENGINE WITH LIVE DATABASE INGESTION
 # =====================================================================
 
 class SubscriptionDatesAgent:
@@ -85,17 +85,18 @@ class SubscriptionDatesAgent:
 
         # 2. Answer for all subscriptions if user asks for general dates
         if any(w in msg_lower for w in ["all", "list", "subscriptions", "what are my dates"]):
-            lines = [f"📅 **Live Autopay & Revoke Schedule for All Subscriptions**:\n"]
+            lines = [f"📅 **Live Autopay & Revoke Schedule for All Subscriptions ({len(subs)} Total)**:\n"]
             sorted_subs = sorted(subs, key=lambda x: str(x.get("next_payment_date") or ""))
             for s in sorted_subs:
                 name = s.get("merchant_name") or s.get("name")
-                p_date = s.get("next_payment_date") or "N/A"
+                p_date = s.get("next_payment_date") or s.get("next_renewal_date") or "N/A"
                 amt = float(s.get("amount") or 0.0)
+                st = " (Free Trial)" if (s.get("is_free_trial") or s.get("status") == "trial") else ""
                 try:
                     r_date = str(datetime.strptime(p_date[:10], "%Y-%m-%d").date() - timedelta(days=1))
                 except Exception:
                     r_date = "N/A"
-                lines.append(f"• **{name}**: Autopay on **{p_date}** (Safe Revoke Deadline: **{r_date}**) — ₹{amt:,.2f}")
+                lines.append(f"• **{name}**{st}: Autopay on **{p_date}** (Safe Revoke Deadline: **{r_date}**) — ₹{amt:,.2f}")
             return "\n".join(lines)
 
         return None
@@ -129,7 +130,7 @@ class EMISpecialistAgent:
         lines = ["💳 **Your Live EMI Loans & Payoff Progress**:\n"]
         for e in emis:
             name = e.get("loan_name") or e.get("merchant_name") or "EMI Loan"
-            amt = float(e.get("installment_amount") or 0.0)
+            amt = float(e.get("installment_amount") or e.get("monthly_installment") or 0.0)
             paid = e.get("installments_paid", 0)
             total = e.get("total_installments", 1)
             due = e.get("next_due_date") or "N/A"
@@ -146,17 +147,24 @@ class SpendAdvisoryAgent:
     def process(message: str, subs: List[dict], emis: List[dict], safety_score: int, status_grade: str, monthly_subs: float, monthly_emis: float) -> str:
         msg_lower = message.lower()
 
-        # Direct count & breakdown query
-        if any(w in msg_lower for w in ["how many", "count", "total subscriptions", "present"]):
-            subs_list = [f"{i+1}. **{s.get('merchant_name') or s.get('name')}:** ₹{float(s.get('amount',0)):,.2f}/mo (Autopay Date: {s.get('next_payment_date')})" for i, s in enumerate(subs)]
-            subs_str = "\n".join(subs_list)
+        keywords = ["how many", "count", "total subscriptions", "present", "active", "subscriptions", "my subscriptions", "list", "show me", "tell me"]
+        if any(w in msg_lower for w in keywords):
+            subs_list = []
+            for i, s in enumerate(subs):
+                name = s.get('merchant_name') or s.get('name')
+                amt = float(s.get('amount', 0))
+                date_val = s.get('next_payment_date') or s.get('next_renewal_date') or 'N/A'
+                st = " (Free Trial)" if (s.get("is_free_trial") or s.get("status") == "trial") else ""
+                subs_list.append(f"{i+1}. **{name}**{st}: ₹{amt:,.2f}/mo (Autopay Date: {date_val})")
+
+            subs_str = "\n".join(subs_list) if subs_list else "No active subscriptions found."
             return (
-                f"Based on your live Autopay Guard database, you currently have **{len(subs)} active subscriptions**, totaling **₹{monthly_subs:,.2f}/month**.\n\n"
-                f"Here is the exact live breakdown:\n"
+                f"You currently have **{len(subs)} active subscriptions** (including free trials). Here is the complete live breakdown from your database:\n\n"
                 f"{subs_str}\n\n"
+                f"**Total Monthly Subscriptions Outflow:** ₹{monthly_subs:,.2f}\n\n"
                 f"--- \n"
                 f"### 💡 Actionable Insights:\n"
-                f"1. **Consolidate AI Tools**: You are paying for multiple AI tools. Choosing your primary tools can save up to ₹3,398/mo.\n"
+                f"1. **Consolidate AI & Software Subscriptions**: Review redundant tools to save up to ₹3,398/mo.\n"
                 f"2. **Check Revoke Deadlines**: Make sure to revoke mandates 24 hours before their autopay charge date."
             )
 
@@ -182,20 +190,25 @@ class AIService:
     def chat(user_id: str, message: str) -> Dict[str, Any]:
         """
         Multi-Agent Orchestration Layer:
-        Fetches live ground truth data from Supabase PostgreSQL and routes queries to specialized agents.
+        Fetches live ground truth data from Supabase PostgreSQL (both active and free trial items)
+        and routes queries to specialized agents or Gemini LLM.
         """
         clean_uid = str(user_id).strip('"\'')
 
-        # 1. Fetch Ground Truth Data from Database
+        # 1. Fetch ALL Live Ground Truth Subscriptions (active + trial)
         try:
-            subs = SubscriptionService.get_user_subscriptions(clean_uid, status="active")
-        except Exception:
+            raw_subs = SubscriptionService.get_user_subscriptions(clean_uid)
+            # Include all non-cancelled subscriptions
+            subs = [s for s in raw_subs if s.get("status") != "cancelled"]
+        except Exception as e:
+            print("Error fetching user subscriptions for AI Service:", e)
             subs = []
 
         try:
-            emis = EMIService.get_user_emis(clean_uid)
-            emis = [e for e in emis if e.get("status") != "cancelled"]
-        except Exception:
+            raw_emis = EMIService.get_user_emis(clean_uid)
+            emis = [e for e in raw_emis if e.get("status") != "cancelled"]
+        except Exception as e:
+            print("Error fetching user EMIs for AI Service:", e)
             emis = []
 
         try:
@@ -256,21 +269,32 @@ class AIService:
         api_key = getattr(settings, "GEMINI_API_KEY", "") or ""
 
         if api_key:
-            subs_text = "\n".join([
-                f"- {s.get('merchant_name') or s.get('name')}: ₹{float(s.get('amount',0)):,.2f}/{s.get('billing_frequency') or 'monthly'}, Autopay Date: {s.get('next_payment_date')}"
-                for s in subs
-            ]) or "None"
-            emis_text = "\n".join([
-                f"- {e.get('loan_name') or e.get('merchant_name')}: ₹{float(e.get('installment_amount',0)):,.2f}/mo, Next Due Date: {e.get('next_due_date')}"
-                for e in emis
-            ]) or "None"
+            subs_lines = []
+            for s in subs:
+                name = s.get('merchant_name') or s.get('name') or "Subscription"
+                amt = float(s.get('amount', 0))
+                freq = s.get('billing_frequency') or s.get('billing_cycle') or 'monthly'
+                p_date = s.get('next_payment_date') or s.get('next_renewal_date') or 'N/A'
+                st = "Free Trial" if (s.get("is_free_trial") or s.get("status") == "trial") else "Active"
+                subs_lines.append(f"- {name}: ₹{amt:,.2f}/{freq} (Status: {st}, Autopay Date: {p_date})")
+            
+            subs_text = "\n".join(subs_lines) if subs_lines else "None"
+
+            emis_lines = []
+            for e in emis:
+                name = e.get('loan_name') or e.get('merchant_name') or "EMI Loan"
+                amt = float(e.get('installment_amount') or e.get('monthly_installment', 0))
+                due = e.get('next_due_date') or 'N/A'
+                emis_lines.append(f"- {name}: ₹{amt:,.2f}/mo (Next Due Date: {due})")
+            
+            emis_text = "\n".join(emis_lines) if emis_lines else "None"
 
             system_prompt = f"""
 You are Autopay Guard AI, a smart personal financial assistant in India.
 Your answers MUST be 100% genuine, factual, and strictly based on the user's real live database records below.
 
 LIVE USER DATABASE RECORDS (Amounts in INR - ₹):
-Active Subscriptions ({len(subs)} Total):
+Active Subscriptions & Free Trials ({len(subs)} Total):
 {subs_text}
 
 Active EMI Loans ({len(emis)} Total):
@@ -285,17 +309,18 @@ Summary:
 User Question: "{message}"
 
 MANDATORY RULES:
-1. If the user asks for the date, last date, or autopay date of ANY subscription (e.g. Netflix Premium), locate the exact 'Autopay Date' from the database record and compute the 'Safe Revoke Date' (1 day prior to Autopay Date). State both dates explicitly.
-2. If the user asks how many subscriptions exist, give the exact count ({len(subs)}) and list every single subscription with its price and date from the live database records.
-3. NEVER make up fictional dates or generic estimates when live database dates are provided.
+1. If the user asks to list or show their active subscriptions or ask how many exist, list EVERY SINGLE subscription from the records above ({len(subs)} Total) including all free trials (e.g., freefire, ChatGPT Plus, gym, my_jio, Adobe, Notion AI, Netflix, claude).
+2. Compute and state the exact total sum (₹{monthly_subs:,.2f}/month).
+3. If the user asks for the date or last date of ANY subscription, state the exact Autopay Date from the records and calculate the Safe Revoke Date (1 day prior to Autopay Date).
+4. NEVER omit any item from the user's live database list.
 """
-            candidate_models = ["gemini-flash-latest", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-pro-latest", "gemini-2.5-flash"]
+            candidate_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-3.6-flash", "gemini-pro", "gemini-flash-latest"]
             payload_data = {"contents": [{"parts": [{"text": system_prompt}]}]}
             req_bytes = json.dumps(payload_data).encode("utf-8")
 
             for model in candidate_models:
                 gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-                headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+                headers = {"Content-Type": "application/json"}
                 req = urllib.request.Request(gemini_url, data=req_bytes, headers=headers)
                 try:
                     with urllib.request.urlopen(req) as resp:
@@ -306,8 +331,8 @@ MANDATORY RULES:
                             if parts:
                                 ai_response_text = parts[0].get("text")
                                 break
-                except Exception:
-                    pass
+                except Exception as model_err:
+                    print(f"Gemini API model {model} attempt note:", model_err)
 
         if not ai_response_text:
             ai_response_text = SpendAdvisoryAgent.process(

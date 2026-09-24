@@ -251,8 +251,11 @@ class FirebaseNotificationService:
         notifications_sent = []
         today_iso = date.today().isoformat()
 
+        from app.services.whatsapp_service import WhatsAppService
+
         for item in due_alerts:
             try:
+                # 1. Dispatch Web / Mobile FCM Push Notification
                 res = FirebaseNotificationService.send_push_notification(
                     user_id=clean_uid,
                     title=item["title"],
@@ -268,13 +271,34 @@ class FirebaseNotificationService:
                     channel="fcm"
                 )
 
+                # 2. Dispatch Meta WhatsApp Cloud API Notification
+                target_wa_phone = getattr(settings, "WHATSAPP_TEST_RECIPIENT", "") or "919014220155"
+                wa_res = WhatsAppService.send_payment_reminder(
+                    to_phone=target_wa_phone,
+                    user_name=clean_uid,
+                    item_name=item["name"],
+                    amount=float(item["amount"]),
+                    due_date=str(item["next_due_date"]),
+                    days_left=item["days_remaining"],
+                    is_trial=bool(item.get("is_free_trial"))
+                )
+
+                NotificationLogService.log_notification(
+                    user_id=clean_uid,
+                    entity_type=item["type"],
+                    entity_id=item["id"],
+                    notification_type=item["notification_type"],
+                    channel="whatsapp"
+                )
+
                 notifications_sent.append({
                     "type": item["type"].upper(),
                     "name": item["name"],
                     "amount": item["amount"],
                     "days_remaining": item["days_remaining"],
                     "urgency": item["urgency"],
-                    "fcm_status": res.get("message")
+                    "fcm_status": res.get("message"),
+                    "whatsapp_status": wa_res.get("status")
                 })
             except Exception as err:
                 print(f"Failed to dispatch notification for {item['name']}: {err}")

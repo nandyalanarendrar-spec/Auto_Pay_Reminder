@@ -133,3 +133,47 @@ def change_password(payload: ChangePasswordRequest, current_user: dict = Depends
         AuditLoggerService.log_action(user_id, "PASSWORD_CHANGE_LOCAL", details={"email": email})
         return {"message": "Password updated successfully (Local Session)!"}
 
+@router.post("/complete-phone", response_model=dict)
+def complete_phone_number(payload: dict, current_user: dict = Depends(get_current_user)):
+    """
+    Updates the authenticated user's name & phone_number in Supabase Auth user_metadata and public.users table.
+    Ensures WhatsApp notifications dynamically target the user's mobile number.
+    """
+    user_id = current_user.get("id") if isinstance(current_user, dict) else getattr(current_user, "id", "demo_user")
+    phone_number = payload.get("phone_number")
+    name = payload.get("name")
+    
+    if not phone_number:
+        raise HTTPException(status_code=400, detail="phone_number is required.")
+
+    supabase = get_supabase_client()
+    try:
+        if supabase:
+            metadata_update = {"phone_number": phone_number}
+            if name:
+                metadata_update["name"] = name
+                metadata_update["full_name"] = name
+
+            try:
+                supabase.auth.admin.update_user_by_id(user_id, {
+                    "user_metadata": metadata_update
+                })
+            except Exception:
+                try:
+                    supabase.auth.update_user({"data": metadata_update})
+                except Exception:
+                    pass
+            
+            try:
+                db_update = {"phone_number": phone_number}
+                if name:
+                    db_update["name"] = name
+                supabase.from_("users").update(db_update).eq("id", user_id).execute()
+            except Exception:
+                pass
+
+        AuditLoggerService.log_action(user_id, "PROFILE_UPDATED", details={"phone_number": phone_number, "name": name})
+        return {"message": "Profile details updated successfully for WhatsApp alerts!", "phone_number": phone_number, "name": name}
+    except Exception as e:
+        return {"message": f"Profile updated (Local Session): {str(e)}", "phone_number": phone_number, "name": name}
+

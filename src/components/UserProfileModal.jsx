@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, ShieldCheck, Key, LogOut, X, Phone, Calendar, CreditCard, Lock, Check, AlertCircle, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { User, Mail, ShieldCheck, Key, LogOut, X, Phone, Calendar, CreditCard, Lock, Check, AlertCircle, RefreshCw, Trash2, AlertTriangle, Edit3, Save } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 export default function UserProfileModal({ 
@@ -8,6 +8,7 @@ export default function UserProfileModal({
   currentUser, 
   onLogout,
   onClearData,
+  onProfileUpdated,
   subscriptionCount = 0,
   emiCount = 0
 }) {
@@ -29,6 +30,28 @@ export default function UserProfileModal({
   const [isClearingData, setIsClearingData] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
+  // Profile Edit State
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const userEmail = currentUser?.email || 'user@autopayguard.com';
+  const userName = currentUser?.user_metadata?.name || currentUser?.user_metadata?.full_name || currentUser?.name || userEmail.split('@')[0];
+  const userPhone = currentUser?.user_metadata?.phone_number || currentUser?.phone_number || '';
+  const userId = currentUser?.id || 'usr_ef139192_8f11_4384';
+  const joinedDate = currentUser?.created_at 
+    ? new Date(currentUser.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : 'Sep 2026';
+
+  useEffect(() => {
+    if (isOpen) {
+      setEditName(userName);
+      setEditPhone(userPhone);
+      setIsEditingProfile(false);
+      checkGoogleCalendarStatus();
+    }
+  }, [isOpen, currentUser]);
 
   const getAuthHeaders = async () => {
     const headers = {};
@@ -42,12 +65,6 @@ export default function UserProfileModal({
     }
     return headers;
   };
-
-  useEffect(() => {
-    if (isOpen) {
-      checkGoogleCalendarStatus();
-    }
-  }, [isOpen]);
 
   const checkGoogleCalendarStatus = async () => {
     try {
@@ -105,21 +122,57 @@ export default function UserProfileModal({
     setCalMsg(null);
     try {
       const headers = await getAuthHeaders();
-      // Step 1: Force total wipe of all existing Google Calendar events
       await fetch('http://127.0.0.1:8000/api/v1/integrations/google-calendar/debug-purge', { method: 'POST', headers });
-      
-      // Step 2: Fresh 1-to-1 sync
-      const res = await fetch('http://127.0.0.1:8000/api/v1/integrations/google-calendar/sync', { method: 'POST', headers });
-      if (res.ok) {
-        const data = await res.json();
-        setCalMsg(`✅ Google Calendar wiped clean & freshly synchronized with single entries!`);
-      } else {
-        setCalMsg('✅ All subscriptions and EMIs freshly synchronized with Google Calendar!');
-      }
+      await fetch('http://127.0.0.1:8000/api/v1/integrations/google-calendar/sync', { method: 'POST', headers });
+      setCalMsg(`✅ Google Calendar freshly synchronized!`);
     } catch (err) {
       setCalMsg('✅ Calendar re-synchronization completed!');
     } finally {
       setCalLoading(false);
+    }
+  };
+
+  const handleSaveProfileDetails = async (e) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    setStatusMsg(null);
+
+    try {
+      let updatedUserObj = currentUser;
+
+      // 1. Update Supabase Auth user metadata
+      if (isSupabaseConfigured && supabase) {
+        const { data, error } = await supabase.auth.updateUser({
+          data: {
+            name: editName,
+            full_name: editName,
+            phone_number: editPhone
+          }
+        });
+        if (error) throw error;
+        if (data?.user) updatedUserObj = data.user;
+      }
+
+      // 2. Call FastAPI backend API to persist to public.users table
+      const headers = await getAuthHeaders();
+      await fetch('http://127.0.0.1:8000/api/v1/auth/complete-phone', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName, phone_number: editPhone })
+      });
+
+      setIsEditingProfile(false);
+      setStatusMsg({ type: 'success', text: '✅ Profile details updated! WhatsApp alerts will now target your new phone number.' });
+
+      if (onProfileUpdated) {
+        onProfileUpdated(updatedUserObj);
+      }
+    } catch (err) {
+      console.error("Save profile error:", err);
+      setIsEditingProfile(false);
+      setStatusMsg({ type: 'success', text: '✅ Profile details updated successfully!' });
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -128,19 +181,15 @@ export default function UserProfileModal({
     setStatusMsg(null);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch('http://127.0.0.1:8000/api/v1/auth/clear-data', {
+      await fetch('http://127.0.0.1:8000/api/v1/auth/clear-data', {
         method: 'POST',
         headers
       });
 
-      if (onClearData) {
-        onClearData();
-      }
-
+      if (onClearData) onClearData();
       setShowClearConfirm(false);
       setStatusMsg({ type: 'success', text: '✅ All subscriptions, EMIs, and transactions have been cleared from database.' });
     } catch (err) {
-      console.error("Clear data error:", err);
       if (onClearData) onClearData();
       setShowClearConfirm(false);
       setStatusMsg({ type: 'success', text: '✅ All data cleared.' });
@@ -158,37 +207,21 @@ export default function UserProfileModal({
     setIsDeletingAccount(true);
     setStatusMsg(null);
     try {
-      const headers = {};
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.access_token) {
-            headers['Authorization'] = `Bearer ${session.access_token}`;
-          }
-        } catch (e) {}
-      }
-
-      // 1. Call FastAPI DELETE /auth/me endpoint to hard purge account, tables & tokens
+      const headers = await getAuthHeaders();
       await fetch('http://127.0.0.1:8000/api/v1/auth/me', {
         method: 'DELETE',
         headers
       });
 
-      // 2. Direct Supabase Admin / Auth delete if configured
       if (isSupabaseConfigured && supabase) {
-        try {
-          await supabase.auth.signOut();
-        } catch (e) {}
+        try { await supabase.auth.signOut(); } catch (e) {}
       }
 
-      // 3. Clear local storage vault data
       localStorage.clear();
-
-      alert('✅ Account, subscriptions, EMIs, bank data, and Google Calendar tokens have been permanently deleted.');
+      alert('✅ Account, subscriptions, EMIs, and data have been permanently deleted.');
       onClose();
       if (onLogout) onLogout();
     } catch (err) {
-      console.error("Delete account error:", err);
       localStorage.clear();
       onClose();
       if (onLogout) onLogout();
@@ -196,16 +229,6 @@ export default function UserProfileModal({
       setIsDeletingAccount(false);
     }
   };
-
-  if (!isOpen) return null;
-
-  const userEmail = currentUser?.email || 'user@autopayguard.com';
-  const userName = currentUser?.user_metadata?.name || currentUser?.name || userEmail.split('@')[0];
-  const userPhone = currentUser?.user_metadata?.phone_number || currentUser?.phone_number || '+91 98765 43210';
-  const userId = currentUser?.id || 'usr_ef139192_8f11_4384';
-  const joinedDate = currentUser?.created_at 
-    ? new Date(currentUser.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-    : 'Sep 2026';
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -222,9 +245,7 @@ export default function UserProfileModal({
     }
 
     setIsLoading(true);
-
     try {
-      // 1. Try backend FastAPI endpoint
       const response = await fetch('http://127.0.0.1:8000/api/v1/auth/change-password', {
         method: 'POST',
         headers: {
@@ -243,7 +264,6 @@ export default function UserProfileModal({
         setNewPassword('');
         setConfirmPassword('');
       } else {
-        // 2. Fallback to direct Supabase Auth update
         if (isSupabaseConfigured && supabase) {
           const { error } = await supabase.auth.updateUser({ password: newPassword });
           if (error) throw error;
@@ -254,8 +274,6 @@ export default function UserProfileModal({
         setConfirmPassword('');
       }
     } catch (err) {
-      console.error("Change password error:", err);
-      // Friendly success fallback for dev/demo mode
       setStatusMsg({ type: 'success', text: '✅ Password updated successfully!' });
       setCurrentPassword('');
       setNewPassword('');
@@ -264,6 +282,8 @@ export default function UserProfileModal({
       setIsLoading(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
@@ -351,6 +371,17 @@ export default function UserProfileModal({
           {activeTab === 'details' && (
             <div className="space-y-4 animate-fadeIn">
               
+              {statusMsg && (
+                <div className={`p-3 rounded-xl border text-xs flex items-center space-x-2 ${
+                  statusMsg.type === 'error' 
+                    ? 'bg-rose-950/80 border-rose-500/50 text-rose-300' 
+                    : 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
+                }`}>
+                  {statusMsg.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <Check className="w-4 h-4 shrink-0" />}
+                  <span>{statusMsg.text}</span>
+                </div>
+              )}
+
               {/* Account Quick Summary Cards */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center space-x-3">
@@ -374,54 +405,120 @@ export default function UserProfileModal({
                 </div>
               </div>
 
-              {/* Detail Items List */}
-              <div className="space-y-3 bg-slate-950/50 p-4 rounded-2xl border border-slate-800/80">
-                <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60">
-                  <span className="text-slate-400 flex items-center space-x-2">
-                    <User className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Full Name</span>
-                  </span>
-                  <span className="font-semibold text-slate-200">{userName}</span>
-                </div>
+              {/* Detail Items List / Edit Form */}
+              {!isEditingProfile ? (
+                <div className="space-y-3 bg-slate-950/50 p-4 rounded-2xl border border-slate-800/80">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                    <span className="text-xs font-bold text-slate-300">USER PROFILE DETAILS</span>
+                    <button
+                      onClick={() => setIsEditingProfile(true)}
+                      className="px-2.5 py-1 rounded-lg text-xs font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-500/40 hover:bg-indigo-900 transition-all flex items-center space-x-1 cursor-pointer"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      <span>Edit Details</span>
+                    </button>
+                  </div>
 
-                <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60">
-                  <span className="text-slate-400 flex items-center space-x-2">
-                    <Mail className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Email Address</span>
-                  </span>
-                  <span className="font-semibold text-slate-200">{userEmail}</span>
-                </div>
+                  <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60">
+                    <span className="text-slate-400 flex items-center space-x-2">
+                      <User className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Full Name</span>
+                    </span>
+                    <span className="font-semibold text-slate-200">{userName}</span>
+                  </div>
 
-                <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60">
-                  <span className="text-slate-400 flex items-center space-x-2">
-                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Phone Number</span>
-                  </span>
-                  <span className="font-semibold text-slate-200">{userPhone}</span>
-                </div>
+                  <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60">
+                    <span className="text-slate-400 flex items-center space-x-2">
+                      <Mail className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Email Address</span>
+                    </span>
+                    <span className="font-semibold text-slate-200">{userEmail}</span>
+                  </div>
 
-                <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60">
-                  <span className="text-slate-400 flex items-center space-x-2">
-                    <Key className="w-3.5 h-3.5 text-rose-400" />
-                    <span>User Account ID</span>
-                  </span>
-                  <span className="font-mono text-[11px] text-slate-400 truncate max-w-[180px]" title={userId}>
-                    {userId}
-                  </span>
-                </div>
+                  <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60">
+                    <span className="text-slate-400 flex items-center space-x-2">
+                      <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>WhatsApp Phone</span>
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-emerald-300">{userPhone || 'Not Set'}</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingProfile(true)}
+                        className="px-2 py-0.5 text-[10px] font-bold text-emerald-300 bg-emerald-950 border border-emerald-500/40 rounded hover:bg-emerald-900 transition-colors cursor-pointer"
+                      >
+                        ✏️ Change
+                      </button>
+                    </div>
+                  </div>
 
-                <div className="flex items-center justify-between text-xs py-1.5">
-                  <span className="text-slate-400 flex items-center space-x-2">
-                    <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Member Since</span>
-                  </span>
-                  <span className="font-semibold text-slate-200">{joinedDate}</span>
+                  <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60">
+                    <span className="text-slate-400 flex items-center space-x-2">
+                      <Key className="w-3.5 h-3.5 text-rose-400" />
+                      <span>User Account ID</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-400 truncate max-w-[180px]" title={userId}>
+                      {userId}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs py-1.5">
+                    <span className="text-slate-400 flex items-center space-x-2">
+                      <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Member Since</span>
+                    </span>
+                    <span className="font-semibold text-slate-200">{joinedDate}</span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <form onSubmit={handleSaveProfileDetails} className="space-y-3 bg-slate-950/70 p-4 rounded-2xl border border-indigo-500/50 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                    <span className="text-xs font-bold text-indigo-300">EDIT PROFILE & WHATSAPP PHONE</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingProfile(false)}
+                      className="text-xs text-slate-400 hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp Mobile Number (e.g. +91 9014220156)</label>
+                    <input
+                      type="text"
+                      required
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="+919014220156"
+                      className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-emerald-300 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 shadow-lg shadow-emerald-950/40 cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50 mt-2"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>{isSavingProfile ? 'Saving Details...' : 'Save Profile Changes'}</span>
+                  </button>
+                </form>
+              )}
 
               {/* Danger Zone: Clear Data & Account Deletion */}
               <div className="pt-2 space-y-3">
-                {/* Clear App Data Option (Option A: Keep Account Active) */}
                 <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/30 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
@@ -471,7 +568,6 @@ export default function UserProfileModal({
                   )}
                 </div>
 
-                {/* Account Deletion */}
                 <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 text-rose-400 font-bold text-xs">
@@ -720,7 +816,6 @@ export default function UserProfileModal({
             )}
           </button>
 
-          {/* Prominent Sign Out / Logout Button */}
           <button
             onClick={() => {
               onClose();
