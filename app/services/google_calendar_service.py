@@ -3,7 +3,7 @@ import urllib.request
 import json
 import time
 from datetime import date, datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import uuid
 
 from app.core.config import settings
@@ -17,7 +17,7 @@ import time
 import hmac
 import hashlib
 from datetime import date, datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import uuid
 
 from app.core.config import settings
@@ -504,6 +504,74 @@ class GoogleCalendarService:
             }
 
     @staticmethod
+    def create_custom_calendar_event(
+        user_id: str,
+        title: str,
+        event_datetime: str,
+        description: str = "",
+        reminder_overrides: Optional[List[Dict[str, Any]]] = None,
+        private_props: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Creates a custom personal reminder event on Google Calendar with user-specified exact date/time and custom multi-time reminder overrides.
+        """
+        access_token = GoogleCalendarService.get_valid_access_token(user_id)
+        
+        try:
+            if "T" in str(event_datetime):
+                dt_obj = datetime.fromisoformat(str(event_datetime).replace("Z", "+00:00"))
+            else:
+                dt_obj = datetime.strptime(str(event_datetime)[:10], "%Y-%m-%d")
+        except Exception:
+            dt_obj = datetime.now() + timedelta(hours=1)
+
+        start_iso = dt_obj.strftime("%Y-%m-%dT%H:%M:%S+05:30")
+        end_iso = (dt_obj + timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M:%S+05:30")
+
+        default_overrides = [
+            {"method": "popup", "minutes": 90}  # 1:30 hr before
+        ]
+        overrides = reminder_overrides if reminder_overrides else default_overrides
+
+        event_payload = {
+            "summary": title,
+            "description": description,
+            "start": {"dateTime": start_iso, "timeZone": "Asia/Kolkata"},
+            "end": {"dateTime": end_iso, "timeZone": "Asia/Kolkata"},
+            "reminders": {
+                "useDefault": False,
+                "overrides": overrides
+            }
+        }
+
+        if private_props:
+            event_payload["extendedProperties"] = {
+                "private": {k: str(v) for k, v in private_props.items() if v is not None}
+            }
+
+        if not access_token:
+            return {"status": "SUCCESS", "event_id": f"sim-custom-{uuid.uuid4().hex[:8]}"}
+
+        calendar_url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+        data_bytes = json.dumps(event_payload).encode("utf-8")
+        req = urllib.request.Request(
+            calendar_url,
+            data=data_bytes,
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                res_data = json.loads(resp.read().decode("utf-8"))
+            return {"status": "SUCCESS", "event_id": res_data.get("id"), "html_link": res_data.get("htmlLink")}
+        except Exception as err:
+            print("Custom event creation note:", err)
+            return {"status": "ERROR", "message": str(err)}
+
+    @staticmethod
     def patch_calendar_event(
         user_id: str,
         event_id: str,
@@ -633,6 +701,35 @@ class GoogleCalendarService:
                 return {"message": "Event already removed or restricted."}
             print("Google Calendar Delete error:", err)
             return {"message": f"Delete note: {str(err)}"}
+
+    @staticmethod
+    def find_event_by_metadata(
+        user_id: str,
+        private_props: Dict[str, str],
+        calendar_id: str = "primary"
+    ) -> Optional[str]:
+        """
+        Searches Google Calendar for an event matching extendedProperties.private metadata (e.g. personal_reminder_id).
+        """
+        access_token = GoogleCalendarService.get_valid_access_token(user_id)
+        if not access_token or not private_props:
+            return None
+
+        try:
+            query_params = []
+            for k, v in private_props.items():
+                query_params.append(f"privateExtendedProperty={urllib.parse.quote(f'{k}={v}')}")
+            
+            url = f"https://www.googleapis.com/calendar/v3/calendars/{urllib.parse.quote(calendar_id)}/events?{'&'.join(query_params)}"
+            req = urllib.request.Request(url, headers={"Authorization": f"Bearer {access_token}"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                items = data.get("items", [])
+                if items and len(items) > 0:
+                    return items[0].get("id")
+        except Exception as e:
+            print("find_event_by_metadata error:", e)
+        return None
 
     @staticmethod
     def delete_event_by_id_or_metadata(

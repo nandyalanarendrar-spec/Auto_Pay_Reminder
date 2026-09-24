@@ -238,6 +238,65 @@ class FirebaseNotificationService:
                 except Exception as ex:
                     print(f"Error checking EMI notification date for {e.get('lender_name')}: {ex}")
 
+        # Check Personal Custom Reminders
+        try:
+            supabase = get_supabase_client()
+            rem_data = []
+            if supabase:
+                res = supabase.from_("personal_reminders").select("*").eq("user_id", clean_uid).eq("is_completed", False).execute()
+                if res.data:
+                    rem_data = res.data
+            else:
+                from app.routes.personal_reminders import _in_memory_reminders
+                rem_data = [r for r in _in_memory_reminders if str(r.get("user_id")) == clean_uid and not r.get("is_completed")]
+
+            now = datetime.now()
+            for r in rem_data:
+                due_str = r.get("due_datetime")
+                if due_str:
+                    try:
+                        due_dt = datetime.fromisoformat(str(due_str).replace("Z", ""))
+                        if due_dt.tzinfo is not None:
+                            due_dt = due_dt.astimezone(timezone.utc).replace(tzinfo=None)
+                            now_compare = datetime.utcnow()
+                        else:
+                            now_compare = datetime.now()
+                        diff_seconds = (due_dt - now_compare).total_seconds()
+                        offsets = r.get("reminder_offsets") or [10, 30, 60]
+
+                        # Check if within any trigger offset window
+                        for offset_mins in offsets:
+                            offset_secs = offset_mins * 60
+                            # Firing window: trigger when diff_seconds is between offset_secs - 30 and offset_secs + 5
+                            if (offset_secs - 30) <= diff_seconds <= (offset_secs + 5):
+                                rem_id = str(r.get("id"))
+                                notif_type = f"offset_{offset_mins}m"
+
+                                if NotificationLogService.is_already_notified(clean_uid, "personal_reminder", rem_id, notif_type, today_iso):
+                                    continue
+
+                                task_title = r.get("title") or "Personal Task"
+                                offset_text = f"{offset_mins} minutes" if offset_mins < 60 else f"{offset_mins//60} hour(s)"
+                                body_text = f"⏰ Task Reminder: '{task_title}' is due in {offset_text}! ({due_dt.strftime('%I:%M %p')})"
+
+                                due_alerts.append({
+                                    "id": rem_id,
+                                    "name": task_title,
+                                    "type": "personal_reminder",
+                                    "notification_type": notif_type,
+                                    "amount": 0,
+                                    "next_due_date": due_str,
+                                    "days_remaining": 0,
+                                    "urgency": "HIGH",
+                                    "title": f"⏰ Reminder: {task_title}",
+                                    "body": body_text
+                                })
+                                break
+                    except Exception as p_err:
+                        print("Error checking personal reminder:", p_err)
+        except Exception as e:
+            print("Personal reminders scan error:", e)
+
         return due_alerts
 
     @staticmethod

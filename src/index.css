@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-[#080F1F] text-slate-100 font-sans antialiased min-h-screen overflow-x-hidden;
+    @apply bg-[#080F1F] text-slate-100 font-sans antialiased min-h-screen overflow-x-hidden transition-colors duration-300;
     background-color: #080F1F;
     background-image: 
       radial-gradient(at 0% 25%, rgba(255, 0, 127, 0.15) 0px, transparent 50%),
@@ -12,9 +12,19 @@
       radial-gradient(at 50% 50%, rgba(6, 182, 212, 0.05) 0px, transparent 50%);
     background-attachment: fixed;
   }
+
+  /* Ultra-Premium Light Theme Styling */
+  body.light-theme {
+    background-color: #F1F5F9 !important;
+    color: #0F172A !important;
+    background-image: 
+      radial-gradient(at 0% 15%, rgba(255, 0, 127, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 85%, rgba(99, 102, 241, 0.07) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(14, 165, 233, 0.05) 0px, transparent 50%) !important;
+  }
 }
 
-/* Glassmorphism Frosted Container (Matching Photo 1) */
+/* Glassmorphism Dark Theme Container */
 .glass-container {
   background: rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(32px);
@@ -41,6 +51,105 @@
   box-shadow: 0 16px 32px -10px rgba(155, 28, 255, 0.2);
 }
 
+/* ==========================================
+   LIGHT MODE (WHITE MODE) PRECISE OVERRIDES
+   ========================================== */
+.light-theme header,
+.light-theme .glass-panel {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(226, 232, 240, 1) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-theme .glass-container {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(203, 213, 225, 0.8) !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 0 25px rgba(99, 102, 241, 0.08) !important;
+}
+
+.light-theme .glass-card-dark {
+  background: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.04), 0 2px 6px -2px rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-theme .glass-card-hover:hover {
+  background: #FFFFFF !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  box-shadow: 0 12px 28px -8px rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Text Colors in Light Mode */
+.light-theme h1, 
+.light-theme h2, 
+.light-theme h3, 
+.light-theme h4, 
+.light-theme h5, 
+.light-theme h6 {
+  color: #0F172A !important;
+}
+
+.light-theme .text-slate-100,
+.light-theme .text-slate-200,
+.light-theme .text-white {
+  color: #0F172A !important;
+}
+
+.light-theme .text-slate-300,
+.light-theme .text-slate-400 {
+  color: #475569 !important;
+}
+
+.light-theme .text-slate-500 {
+  color: #64748B !important;
+}
+
+/* Background Color Conversions in Light Mode */
+.light-theme .bg-slate-950,
+.light-theme .bg-slate-900,
+.light-theme .bg-slate-900\/90,
+.light-theme .bg-slate-900\/80,
+.light-theme .bg-slate-950\/80 {
+  background-color: #FFFFFF !important;
+}
+
+.light-theme .bg-slate-900\/50,
+.light-theme .bg-slate-800\/50,
+.light-theme .bg-slate-800\/40 {
+  background-color: #F8FAFC !important;
+}
+
+.light-theme .border-slate-800,
+.light-theme .border-slate-800\/80,
+.light-theme .border-slate-700 {
+  border-color: #E2E8F0 !important;
+}
+
+/* Inputs, Selects & Buttons in Light Mode */
+.light-theme input,
+.light-theme select,
+.light-theme textarea {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+
+.light-theme input::placeholder,
+.light-theme textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+.light-theme .nav-btn-secondary {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+  color: #334155 !important;
+}
+
+.light-theme .nav-btn-secondary:hover {
+  background-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
 /* Primary Magenta -> Purple Gradient Button */
 .btn-gradient-primary {
   background: linear-gradient(90deg, #ff007f 0%, #9b1cff 100%);
@@ -62,9 +171,17 @@
   background: #080F1F;
 }
 
+.light-theme ::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
+}
+
+.light-theme ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
 }
 
 ::-webkit-scrollbar-thumb:hover {

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routes import health, auth, subscriptions, emis, mock_generator, analytics, dashboard, integrations, notifications, chatbot, admin, ai, reports, whatsapp
+from app.routes import health, auth, subscriptions, emis, mock_generator, analytics, dashboard, integrations, notifications, chatbot, admin, ai, reports, whatsapp, personal_reminders
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -43,14 +43,25 @@ def startup_db_sanity_check():
                     print(f"⚠️ WARNING: Missing database tables in Supabase public schema: {missing}")
                     print("Run 'supabase_schema.sql' in Supabase SQL Editor to restore missing tables.")
                 else:
-                    conn.execute(text("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS calendar_sync_error VARCHAR(1024);"))
-                    conn.execute(text("ALTER TABLE emis ADD COLUMN IF NOT EXISTS calendar_sync_error VARCHAR(1024);"))
                     conn.execute(text("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_start_date DATE;"))
                     conn.execute(text("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_end_date DATE;"))
                     conn.execute(text("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS expected_first_payment_date DATE;"))
                     conn.execute(text("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS is_free_trial BOOLEAN DEFAULT FALSE;"))
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS public.personal_reminders (
+                            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                            user_id UUID NOT NULL,
+                            title VARCHAR(255) NOT NULL,
+                            notes TEXT,
+                            due_datetime TIMESTAMP WITH TIME ZONE NOT NULL,
+                            reminder_offsets JSONB DEFAULT '[10, 30, 60, 1440]'::jsonb,
+                            calendar_event_id VARCHAR(255),
+                            is_completed BOOLEAN DEFAULT false,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                        );
+                    """))
                     conn.commit()
-                    print("✅ PASS: Connected to Supabase PostgreSQL (All core tables verified).")
+                    print("✅ PASS: Connected to Supabase PostgreSQL (All core tables & personal_reminders verified).")
         else:
             print("⚠️ WARNING: DATABASE_URL not initialized. Check .env configuration.")
     except Exception as err:
@@ -94,6 +105,7 @@ app.include_router(admin.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(whatsapp.router, prefix="/api/v1")
+app.include_router(personal_reminders.router, prefix="/api/v1")
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():

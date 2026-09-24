@@ -1,7 +1,7 @@
 import React from 'react';
-import { Sparkles, Shield, AlertCircle, Plus, ChevronRight, Zap, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Shield, AlertCircle, Plus, ChevronRight, Zap, CheckCircle2, Bell, Clock } from 'lucide-react';
 
-export default function DashboardStats({ subscriptions, onOpenAddModal, onToggleAiChat }) {
+export default function DashboardStats({ subscriptions, onOpenAddModal, onToggleAiChat, onOpenPersonalReminders }) {
   // Calculate total monthly expenditure (Excludes cancelled or Autopay OFF items)
   const totalMonthlySpend = subscriptions.reduce((acc, sub) => {
     if (sub.status === 'cancelled' || sub.autopay_enabled === false) return acc;
@@ -88,35 +88,32 @@ export default function DashboardStats({ subscriptions, onOpenAddModal, onToggle
         <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-cyan-300 group-hover:translate-x-1 transition-all" />
       </button>
 
-      {/* 3. SUBSCRIPTION HEALTH CARD */}
+      {/* 3.5 PERSONAL TASK & CUSTOM REMINDERS CARD */}
       <div 
-        onClick={onToggleAiChat}
-        className="glass-card-dark rounded-3xl p-6 border border-white/10 hover:border-emerald-500/40 shadow-2xl transition-all cursor-pointer group"
-        title="Click to analyze subscription health with AI"
+        onClick={onOpenPersonalReminders}
+        className="glass-card-dark rounded-3xl p-5 border border-amber-500/20 hover:border-amber-500/50 shadow-2xl transition-all cursor-pointer group bg-gradient-to-r from-amber-950/20 via-slate-900 to-indigo-950/20"
+        title="Open Personal Reminders & Multi-Time Alert Vault"
       >
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">Subscription Health</h4>
-            <p className="text-xs text-slate-400 mt-0.5">No leaks detected • 100% Lean</p>
-          </div>
-          <div className="px-3 py-1.5 rounded-xl bg-cyan-950/60 border border-cyan-500/30 text-center group-hover:border-emerald-500/50 transition-colors">
-            <span className="text-lg font-black text-cyan-300 group-hover:text-emerald-300 leading-none">100%</span>
-            <span className="block text-[9px] font-bold tracking-wider text-cyan-400 group-hover:text-emerald-400 uppercase">HEALTH</span>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mb-4">
-          <div className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 w-full rounded-full shadow-[0_0_10px_#00F2FE]"></div>
-        </div>
-
-        {/* Health Insight Box */}
-        <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between text-xs text-slate-300 group-hover:border-slate-700 transition-colors">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Zap className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-            <span>Great job! Your subscriptions are verified, active and leak-free.</span>
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 p-0.5 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                <Bell className="w-5 h-5 text-amber-400" />
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors flex items-center space-x-1.5">
+                <span>Personal Reminders Vault</span>
+                <span className="px-2 py-0.5 text-[9px] font-bold bg-amber-950 text-amber-300 border border-amber-500/30 rounded-full">
+                  Multi-Time Alerts
+                </span>
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Set custom alerts (10m, 30m, 1h, 1d) for bills, passport, meetings & tasks</p>
+            </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+          <button className="p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-amber-400 group-hover:bg-amber-500 group-hover:text-slate-950 transition-all">
+            <Clock className="w-4 h-4" />
+          </button>
         </div>
       </div>
 

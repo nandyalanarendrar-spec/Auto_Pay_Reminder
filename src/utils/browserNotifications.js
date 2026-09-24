@@ -31,39 +31,54 @@ export const sendWebNotification = async (title, options = {}) => {
       granted = permission === 'granted';
     }
 
-    if (granted) {
-      const notifOptions = {
-        body: options.body || '',
-        tag: options.tag || `notif-${Date.now()}`,
-        requireInteraction: true,
-        silent: false
-      };
+    if (!granted) {
+      console.warn("🔔 Desktop Notification Permission not granted:", Notification.permission);
+      return false;
+    }
 
-      console.log("🔔 [Autopay Guard Web Notification Fired]:", title, notifOptions);
+    const notifOptions = {
+      body: options.body || '',
+      tag: options.tag || `notif-${Date.now()}`,
+      requireInteraction: true,
+      silent: false
+    };
 
-      // Attempt 1: ServiceWorker Persistent Notification if registered
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          if (registration && registration.showNotification) {
-            await registration.showNotification(title, notifOptions);
-            return true;
-          }
-        } catch (swErr) {
-          console.warn("ServiceWorker showNotification fallback to HTML5 Notification API:", swErr);
-        }
-      }
+    console.log("🔔 [Autopay Guard Web Notification Fired]:", title, notifOptions);
 
-      // Attempt 2: HTML5 Standard Notification API
+    // Play subtle notification chime sound
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
+    } catch (aErr) {}
+
+    // Direct HTML5 Standard Notification API (Instant, Non-blocking)
+    try {
       const notification = new Notification(title, notifOptions);
-
       notification.onclick = () => {
         try { window.focus(); } catch (e) {}
         if (options.onClick) options.onClick();
         notification.close();
       };
-
       return true;
+    } catch (directErr) {
+      console.warn("Direct HTML5 Notification fallback to ServiceWorker:", directErr);
+    }
+
+    // Fallback: ServiceWorker showNotification if direct HTML5 constructor failed
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      try {
+        const registration = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, reject) => setTimeout(() => reject(new Error("SW timeout")), 500))
+        ]);
+        if (registration && registration.showNotification) {
+          await registration.showNotification(title, notifOptions);
+          return true;
+        }
+      } catch (swErr) {
+        console.warn("ServiceWorker showNotification error:", swErr);
+      }
     }
   } catch (err) {
     console.warn("Web Notification trigger error:", err);

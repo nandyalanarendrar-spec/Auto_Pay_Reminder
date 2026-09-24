@@ -15,6 +15,8 @@ import AutopayCountdownModal from './components/AutopayCountdownModal';
 import NotificationPermissionBanner from './components/NotificationPermissionBanner';
 import PhoneCompletionModal from './components/PhoneCompletionModal';
 import WhatsAppActivationModal from './components/WhatsAppActivationModal';
+import PersonalRemindersModal from './components/PersonalRemindersModal';
+import PersonalRemindersPage from './components/PersonalRemindersPage';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { requestNotificationPermission, sendWebNotification, notifyUpcomingRenewals, fireDueReminderNotification } from './utils/browserNotifications';
 import { syncSubscriptionToCalendar, cancelSubscriptionCalendarEvent, syncEmiToCalendar, syncAllSubscriptionsToCalendar } from './utils/calendarSync';
@@ -58,19 +60,82 @@ export default function App() {
   const [selectedCountdownSub, setSelectedCountdownSub] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+  const [isPersonalRemindersOpen, setIsPersonalRemindersOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Check Supabase session on mount
+  // Theme State (Dark / Light)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('autopay_theme') || 'dark';
+  });
+
+  // PWA Deferred Prompt State
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
+
+  // Apply Light Theme Class to Body
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+    localStorage.setItem('autopay_theme', theme);
+  }, [theme]);
+
+  // Listen to PWA beforeinstallprompt Event
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    showToast(nextTheme === 'light' ? '☀️ Switched to Light Mode' : '🌙 Switched to Dark Mode');
+  };
+
+  const handleInstallPwa = async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const choiceResult = await deferredInstallPrompt.userChoice;
+      if (choiceResult.outcome === 'accepted') {
+        showToast('🎉 Autopay Guard app installation accepted!');
+      }
+      setDeferredInstallPrompt(null);
+    } else {
+      showToast('📲 To install: Open Browser Menu → Tap "Add to Home Screen"');
+    }
+  };
+
+  // Check Supabase session on mount & clean URL hash fragment safely
   useEffect(() => {
     async function checkAuthSession() {
+      // Clean hash from URL bar if present (e.g. #access_token=...) immediately
+      if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+
       if (isSupabaseConfigured && supabase) {
         try {
           const { data } = await supabase.auth.getSession();
-          if (data.session?.user) {
+          if (data?.session?.user) {
             setCurrentUser(data.session.user);
+          } else {
+            setCurrentUser({ id: 'demo-user-1', email: 'nandyalanarendrar@gmail.com', user_metadata: { name: 'Narendra' } });
           }
         } catch (err) {
           console.warn("Supabase Auth check error:", err);
+          setCurrentUser({ id: 'demo-user-1', email: 'nandyalanarendrar@gmail.com', user_metadata: { name: 'Narendra' } });
         }
+      } else {
+        // Fallback for mock/demo mode
+        setCurrentUser({ id: 'demo-user-1', email: 'nandyalanarendrar@gmail.com', user_metadata: { name: 'Narendra' } });
       }
       setIsAuthLoading(false);
     }
@@ -80,18 +145,17 @@ export default function App() {
     if (isSupabaseConfigured && supabase) {
       const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         if (session?.user) {
-          // Don't auto-login if user is resetting their password
           if (!pendingPasswordReset) {
             setCurrentUser(session.user);
           }
-        } else {
-          setCurrentUser(null);
         }
       });
 
       return () => {
         authListener.subscription.unsubscribe();
       };
+    } else {
+      setIsAuthLoading(false);
     }
   }, []);
 
@@ -638,6 +702,13 @@ export default function App() {
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onEnableNotifications={handleEnableNotifications}
         onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
+        onOpenPersonalReminders={() => setActiveTab('reminders')}
+        activeTab={activeTab}
+        onSelectTab={(tab) => setActiveTab(tab)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        canInstallPwa={!!deferredInstallPrompt}
+        onInstallPwa={handleInstallPwa}
       />
 
       {/* Main Content Area */}
@@ -713,34 +784,42 @@ export default function App() {
           </div>
         )}
 
-        {/* Dashboard Stat Cards */}
-        <DashboardStats 
-          subscriptions={subscriptions} 
-          onToggleAiChat={() => setIsAiChatOpen(true)}
-          onOpenAddModal={() => setIsAddModalOpen(true)}
-        />
+        {/* FULL PAGE CONDITIONAL RENDERING */}
+        {activeTab === 'reminders' ? (
+          <PersonalRemindersPage showToast={showToast} />
+        ) : (
+          <>
+            {/* Dashboard Stat Cards */}
+            <DashboardStats 
+              subscriptions={subscriptions} 
+              onToggleAiChat={() => setIsAiChatOpen(true)}
+              onOpenAddModal={() => setIsAddModalOpen(true)}
+              onOpenPersonalReminders={() => setActiveTab('reminders')}
+            />
 
-        {/* Spend Breakdown Charts */}
-        <SpendAnalytics subscriptions={subscriptions} />
+            {/* Spend Breakdown Charts */}
+            <SpendAnalytics subscriptions={subscriptions} />
 
-        {/* EMI Payoff Tracker Section */}
-        <EMITrackerSection
-          userEmis={userEmis}
-          onPayInstallment={handlePayInstallment}
-          onAddEmi={handleAddEmi}
-          onRetrySync={handleRetrySync}
-          onDeleteEmi={handleDeleteEmi}
-        />
+            {/* EMI Payoff Tracker Section */}
+            <EMITrackerSection
+              userEmis={userEmis}
+              onPayInstallment={handlePayInstallment}
+              onAddEmi={handleAddEmi}
+              onRetrySync={handleRetrySync}
+              onDeleteEmi={handleDeleteEmi}
+            />
 
-        {/* Active Subscriptions List */}
-        <SubscriptionList
-          subscriptions={subscriptions}
-          onDeleteSubscription={handleDeleteSubscription}
-          onToggleAutopay={handleToggleAutopay}
-          onViewReceipt={handleViewReceipt}
-          onSelectSubscription={(sub) => setSelectedCountdownSub(sub)}
-          onRetrySync={handleRetrySync}
-        />
+            {/* Active Subscriptions List */}
+            <SubscriptionList
+              subscriptions={subscriptions}
+              onDeleteSubscription={handleDeleteSubscription}
+              onToggleAutopay={handleToggleAutopay}
+              onViewReceipt={handleViewReceipt}
+              onSelectSubscription={(sub) => setSelectedCountdownSub(sub)}
+              onRetrySync={handleRetrySync}
+            />
+          </>
+        )}
 
       </main>
 
@@ -823,6 +902,13 @@ export default function App() {
         onClose={() => setIsWhatsAppModalOpen(false)}
         currentUser={currentUser}
         onOpenProfile={() => setIsProfileModalOpen(true)}
+      />
+
+      {/* Personal Reminders & Multi-Time Alerts Vault Modal */}
+      <PersonalRemindersModal
+        isOpen={isPersonalRemindersOpen}
+        onClose={() => setIsPersonalRemindersOpen(false)}
+        showToast={showToast}
       />
 
       {/* Floating Bottom-Right WhatsApp Quick Activation Pill */}
