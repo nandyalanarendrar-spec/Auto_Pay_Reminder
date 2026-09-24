@@ -30,11 +30,16 @@ export default function UserProfileModal({
   const [isClearingData, setIsClearingData] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  // Profile Edit State
+  // Profile Edit & Email OTP State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const [otpStep, setOtpStep] = useState('input'); // 'input' | 'otp'
+  const [otpCode, setOtpCode] = useState('');
+  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const userEmail = currentUser?.email || 'user@autopayguard.com';
   const userName = currentUser?.user_metadata?.name || currentUser?.user_metadata?.full_name || currentUser?.name || userEmail.split('@')[0];
@@ -131,6 +136,105 @@ export default function UserProfileModal({
       setCalLoading(false);
     }
   };
+
+  const handleRequestPhoneOtp = async (e) => {
+    e.preventDefault();
+    if (!editPhone || editPhone.trim().length < 8) {
+      setStatusMsg({ type: 'error', text: 'Please enter a valid mobile phone number.' });
+      return;
+    }
+
+    setIsRequestingOtp(true);
+    setStatusMsg(null);
+
+    try {
+      // Use Supabase's built-in OTP email — same system as registration
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: userEmail,
+          options: { shouldCreateUser: false }
+        });
+        if (error) {
+          setStatusMsg({ type: 'error', text: error.message || 'Failed to send OTP email.' });
+          return;
+        }
+      }
+
+      setOtpStep('otp');
+      setOtpCode(''); // User must check Gmail manually
+      setStatusMsg({
+        type: 'success',
+        text: `📩 6-digit OTP sent to ${userEmail}. Check your Gmail inbox and enter the code below.`
+      });
+    } catch (err) {
+      console.error("OTP request error:", err);
+      setStatusMsg({ type: 'error', text: 'Failed to send OTP. Please try again.' });
+    } finally {
+      setIsRequestingOtp(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async (e) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length < 6) {
+      setStatusMsg({ type: 'error', text: 'Please enter the 6-digit OTP code sent to your email.' });
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    setStatusMsg(null);
+
+    try {
+      // Verify OTP using Supabase's built-in system — same as registration verification
+      if (isSupabaseConfigured && supabase) {
+        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+          email: userEmail,
+          token: otpCode.trim(),
+          type: 'email'
+        });
+
+        if (verifyError) {
+          setStatusMsg({ type: 'error', text: verifyError.message || 'Invalid or expired OTP code. Check your email and try again.' });
+          setIsVerifyingOtp(false);
+          return;
+        }
+
+        // OTP verified! Now update the phone number in Supabase Auth metadata & DB
+        let updatedUserObj = currentUser;
+        try {
+          const { data: supaData } = await supabase.auth.updateUser({
+            data: { name: editName, full_name: editName, phone_number: editPhone }
+          });
+          if (supaData?.user) updatedUserObj = supaData.user;
+        } catch (e) {}
+
+        // Also update in backend database
+        try {
+          const headers = await getAuthHeaders();
+          await fetch('http://127.0.0.1:8000/api/v1/auth/complete-phone', {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone_number: editPhone, name: editName })
+          });
+        } catch (e) {}
+
+        setIsEditingProfile(false);
+        setOtpStep('input');
+        setOtpCode('');
+        setStatusMsg({ type: 'success', text: '✅ Email OTP Verified! Phone number updated successfully.' });
+
+        if (onProfileUpdated) {
+          onProfileUpdated(updatedUserObj);
+        }
+      }
+    } catch (err) {
+      console.error("OTP verify error:", err);
+      setStatusMsg({ type: 'error', text: 'Failed to verify OTP code. Please try again.' });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
 
   const handleSaveProfileDetails = async (e) => {
     e.preventDefault();
@@ -471,50 +575,122 @@ export default function UserProfileModal({
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleSaveProfileDetails} className="space-y-3 bg-slate-950/70 p-4 rounded-2xl border border-indigo-500/50 animate-fadeIn">
+                <div className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-indigo-500/50 animate-fadeIn">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-                    <span className="text-xs font-bold text-indigo-300">EDIT PROFILE & WHATSAPP PHONE</span>
+                    <span className="text-xs font-bold text-indigo-300 flex items-center space-x-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>{otpStep === 'input' ? 'EDIT PROFILE & WHATSAPP PHONE' : 'SECURITY EMAIL VERIFICATION'}</span>
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setIsEditingProfile(false)}
-                      className="text-xs text-slate-400 hover:text-white"
+                      onClick={() => {
+                        setIsEditingProfile(false);
+                        setOtpStep('input');
+                        setOtpCode('');
+                      }}
+                      className="text-xs text-slate-400 hover:text-white cursor-pointer"
                     >
                       Cancel
                     </button>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
+                  {otpStep === 'input' ? (
+                    <form onSubmit={handleRequestPhoneOtp} className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp Mobile Number (e.g. +91 9014220156)</label>
-                    <input
-                      type="text"
-                      required
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                      placeholder="+919014220156"
-                      className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-emerald-300 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">New WhatsApp Mobile Number (e.g. +91 9014220156)</label>
+                        <input
+                          type="text"
+                          required
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          placeholder="+919014220156"
+                          className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-emerald-300 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
 
-                  <button
-                    type="submit"
-                    disabled={isSavingProfile}
-                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 shadow-lg shadow-emerald-950/40 cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50 mt-2"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>{isSavingProfile ? 'Saving Details...' : 'Save Profile Changes'}</span>
-                  </button>
-                </form>
+                      <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-[11px] text-indigo-200 leading-relaxed flex items-start space-x-2">
+                        <Mail className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                        <span>Security Check: A 6-digit OTP code will be sent to <strong>{userEmail}</strong> to verify your identity before saving your new mobile number.</span>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isRequestingOtp}
+                        className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-950/60 cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50 mt-2"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>{isRequestingOtp ? 'Sending OTP to Email...' : '📩 Send Email Verification OTP'}</span>
+                      </button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleVerifyPhoneOtp} className="space-y-3 animate-fadeIn">
+                      <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-400">
+                          <span>Target New Mobile Number:</span>
+                          <button
+                            type="button"
+                            onClick={() => setOtpStep('input')}
+                            className="text-[11px] font-bold text-amber-400 hover:underline cursor-pointer"
+                          >
+                            Edit Number
+                          </button>
+                        </div>
+                        <p className="text-sm font-bold text-emerald-300 font-mono">{editPhone}</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-200 space-y-1">
+                        <p className="font-bold flex items-center space-x-1.5 text-emerald-300">
+                          <span>📩 6-Digit OTP Dispatched</span>
+                        </p>
+                        <p className="text-slate-300">
+                          Please check your email inbox (<strong>{userEmail}</strong>) and enter the 6-digit security code below.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">Enter 6-Digit OTP Code</label>
+                        <input
+                          type="text"
+                          required
+                          maxLength={6}
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value)}
+                          placeholder="e.g. 849201"
+                          className="w-full px-3.5 py-2.5 text-base font-bold tracking-widest text-center bg-slate-900 border border-emerald-500/60 rounded-xl text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-emerald-400 font-mono"
+                        />
+                      </div>
+
+                      <div className="flex items-center space-x-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setOtpStep('input')}
+                          className="w-1/3 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 cursor-pointer"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isVerifyingOtp}
+                          className="w-2/3 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 shadow-lg shadow-emerald-950/60 cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50"
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>{isVerifyingOtp ? 'Verifying OTP...' : 'Verify OTP & Save Phone'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               )}
 
               {/* Danger Zone: Clear Data & Account Deletion */}

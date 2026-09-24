@@ -1,7 +1,6 @@
 # Dependencies
 node_modules/
 **/node_modules/
-mobile/node_modules/
 
 # Python Virtual Environments & Caches
 myproject/
@@ -10,6 +9,7 @@ venv/
 __pycache__/
 **/__pycache__/
 *.pyc
+.pytest_cache/
 
 # Environment & Secret files
 .env
@@ -21,14 +21,25 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Temp Scratch files
+# Temp Scratch, Debug & Test scripts (dev-only, not production code)
 scratch/
+scripts/
+tests/
+
+# Runtime data files (auto-generated at runtime)
 audit_logs.json
 device_tokens.json
 google_tokens.json
 firebase_service_account.json
 
+# Unused mobile app prototype
+mobile/
+
+# One-time SQL migration files (already applied to Supabase)
+supabase_mock_initialized_migration.sql
+supabase_rls_policies.sql
+supabase_tokens_migration.sql
+
 # Build Outputs
 dist/
 build/
-mobile/build/

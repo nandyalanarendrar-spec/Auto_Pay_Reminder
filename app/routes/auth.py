@@ -4,6 +4,7 @@ from app.core.security import get_supabase_client, get_current_user
 from app.services.audit_log_service import AuditLoggerService
 from app.services.security_hardening_service import SecurityHardeningService
 
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/signup", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -176,4 +177,5 @@ def complete_phone_number(payload: dict, current_user: dict = Depends(get_curren
         return {"message": "Profile details updated successfully for WhatsApp alerts!", "phone_number": phone_number, "name": name}
     except Exception as e:
         return {"message": f"Profile updated (Local Session): {str(e)}", "phone_number": phone_number, "name": name}
+
 
