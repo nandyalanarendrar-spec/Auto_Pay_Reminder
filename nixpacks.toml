@@ -1,0 +1,10 @@
+# Explicit build config for Railway (Nixpacks) — this repo has both a Python
+# backend (requirements.txt) and a Node frontend (package.json) at the root,
+# so auto-detection could pick the wrong one. This forces the Python backend.
+providers = ["python"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[start]
+cmd = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
