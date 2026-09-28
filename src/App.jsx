@@ -18,7 +18,6 @@ import WhatsAppActivationModal from './components/WhatsAppActivationModal';
 import PersonalRemindersPage from './components/PersonalRemindersPage';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { requestNotificationPermission, sendWebNotification, fireDueReminderNotification } from './utils/browserNotifications';
-import { initNativePushNotifications } from './utils/nativeFeatures';
 import { syncSubscriptionToCalendar, cancelSubscriptionCalendarEvent, syncEmiToCalendar, syncAllSubscriptionsToCalendar } from './utils/calendarSync';
 import { Check, ShieldAlert, Calendar } from 'lucide-react';
 import { API_BASE_URL } from './config/api';
@@ -306,14 +305,6 @@ export default function App() {
       return () => clearInterval(intervalId);
     }
   }, [currentUser, subscriptions, userEmis]);
-
-  // Register this device for native push notifications when running as the mobile app
-  // (no-op on web — the existing browser Notification permission banner handles that case).
-  useEffect(() => {
-    if (currentUser) {
-      initNativePushNotifications(getAuthTokenForSync);
-    }
-  }, [currentUser?.id]);
 
   // Helper toast notification
   const showToast = (msg) => {

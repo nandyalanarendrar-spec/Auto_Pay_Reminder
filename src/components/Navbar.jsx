@@ -18,7 +18,6 @@ import {
   Wrench,
   Clock
 } from 'lucide-react';
-import { saveFileToDevice } from '../utils/nativeFeatures';
 import { API_BASE_URL } from '../config/api';
 
 export default function Navbar({ 
@@ -66,10 +65,14 @@ export default function Navbar({
         return;
       }
       const blob = await response.blob();
-      const filename = `autopay_guard_${format === 'csv' ? 'report.csv' : 'summary.pdf'}`;
-      // On the native app this saves into the device's Documents folder instead of relying on
-      // a browser-only download link, which doesn't work the same way inside a WebView.
-      await saveFileToDevice(blob, filename);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `autopay_guard_${format === 'csv' ? 'report.csv' : 'summary.pdf'}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       window.open(reportUrl, '_blank');
     }
