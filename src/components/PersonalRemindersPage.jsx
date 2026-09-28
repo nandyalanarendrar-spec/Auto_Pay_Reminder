@@ -24,18 +24,22 @@ import {
 import PersonalReminderCountdownModal from './PersonalReminderCountdownModal';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { sendWebNotification, requestNotificationPermission } from '../utils/browserNotifications';
+import { API_BASE_URL } from '../config/api';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
-
+// Backend values always carry an explicit UTC offset (usually "+05:30" IST). Any
+// string with an explicit offset (Z, +HH:MM, -HH:MM) is parsed natively — the
+// JS Date constructor already converts that correctly to the right instant,
+// regardless of the browser's own timezone. Only a bare, offset-less string
+// (e.g. the raw value of a <input type="datetime-local"> during editing) is
+// treated as browser-local wall-clock time.
 export const parseLocalDate = (dateStr) => {
   if (!dateStr) return new Date();
   const str = String(dateStr);
-  if (str.endsWith('Z') || str.includes('+00:00') || str.includes('+0000')) {
-    const parsedUtc = new Date(str);
-    if (!isNaN(parsedUtc.getTime())) return parsedUtc;
+  if (/([Zz]|[+-]\d{2}:?\d{2})$/.test(str)) {
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) return parsed;
   }
-  const cleanStr = str.replace('Z', '').split('+')[0];
-  const parts = cleanStr.split(/[-T:\s]/);
+  const parts = str.split(/[-T:\s]/);
   if (parts.length >= 5) {
     const year = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1;
@@ -70,7 +74,11 @@ export default function PersonalRemindersPage({ showToast }) {
     const d = new Date();
     d.setDate(d.getDate() + 1);
     d.setHours(10, 0, 0, 0);
-    return d.toISOString().slice(0, 16);
+    // Build the "YYYY-MM-DDTHH:mm" string from local components directly —
+    // toISOString() would convert to UTC first, shifting the displayed time
+    // for any browser not at UTC+0.
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
   
   const [dueDatetime, setDueDatetime] = useState(getTomorrowDefault);
@@ -100,6 +108,8 @@ export default function PersonalRemindersPage({ showToast }) {
       if (res.ok) {
         const data = await res.json();
         setReminders(data);
+      } else if (showToast) {
+        showToast("⚠️ Could not load personal reminders from server.");
       }
     } catch (err) {
       console.warn("Fetch personal reminders note:", err);
@@ -135,9 +145,11 @@ export default function PersonalRemindersPage({ showToast }) {
           setSelectedReminderForModal(prev => ({ ...prev, is_completed: data.is_completed, completed_at: data.completed_at || null }));
         }
         if (showToast) showToast(data.is_completed ? "✅ Task marked as Completed!" : "⏳ Task reactivated as Active!");
+      } else {
+        if (showToast) showToast("❌ Failed to update task status. Please try again.");
       }
     } catch (err) {
-      console.warn("Toggle completion note:", err);
+      if (showToast) showToast("⚠️ Error updating task: " + err.message);
     }
   };
 
@@ -161,14 +173,11 @@ export default function PersonalRemindersPage({ showToast }) {
 
         allPushOffsets.forEach(offset => {
           const targetOffsetMs = offset * 60 * 1000;
-          let inWindow = false;
-          if (offset === 0) {
-            // Trigger 0m alert when within 30s around target due time
-            inWindow = (diffMs <= 5000 && diffMs >= -30000);
-          } else {
-            // Trigger lead-time alert within 25s window at exact target offset time
-            inWindow = (diffMs <= targetOffsetMs + 5000 && diffMs >= targetOffsetMs - 20000);
-          }
+          // Threshold-based (not a narrow window): fires as soon as the countdown has crossed at or
+          // below this offset's mark and hasn't fired yet this session, so a throttled/backgrounded tab
+          // still "catches up" instead of silently skipping an offset. Bounded below at -2 minutes so a
+          // long-overdue reminder doesn't fire a flood of stale alerts.
+          const inWindow = diffMs <= targetOffsetMs + 5000 && diffMs >= -120000;
 
           if (inWindow) {
             const key = `${rem.id}_offset_${offset}`;
@@ -311,14 +320,18 @@ export default function PersonalRemindersPage({ showToast }) {
       const headers = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      await fetch(`${API_BASE_URL}/personal-reminders/${id}`, { method: 'DELETE', headers });
+      const res = await fetch(`${API_BASE_URL}/personal-reminders/${id}`, { method: 'DELETE', headers });
+      if (!res.ok) {
+        if (showToast) showToast("❌ Failed to delete reminder. Please try again.");
+        return;
+      }
       setReminders(reminders.filter(r => r.id !== id));
       if (showToast) showToast("🗑️ Personal reminder removed.");
       if (selectedReminderForModal?.id === id) {
         setIsCountdownModalOpen(false);
       }
     } catch (err) {
-      console.warn("Delete reminder note:", err);
+      if (showToast) showToast("⚠️ Error deleting reminder: " + err.message);
     }
   };
 
@@ -395,7 +408,7 @@ export default function PersonalRemindersPage({ showToast }) {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const totalActiveTriggers = reminders.reduce((acc, r) => acc + (r.reminder_offsets?.length || 1), 0);
+  const totalActiveTriggers = reminders.reduce((acc, r) => acc + (isTaskCompleted(r) ? 0 : (r.reminder_offsets?.length || 1)), 0);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto animate-in fade-in duration-300">
@@ -424,7 +437,7 @@ export default function PersonalRemindersPage({ showToast }) {
         {/* TOP METRICS BADGES */}
         <div className="flex items-center space-x-3 self-start md:self-auto">
           <div className="px-4 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 text-center">
-            <span className="block text-xl font-black text-amber-400 leading-none">{reminders.length}</span>
+            <span className="block text-xl font-black text-amber-400 leading-none">{activeCount}</span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Tasks</span>
           </div>
           <div className="px-4 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 text-center">

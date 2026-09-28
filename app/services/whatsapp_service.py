@@ -70,7 +70,7 @@ class WhatsAppService:
             req_data = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
 
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 res_body = json.loads(resp.read().decode("utf-8"))
                 msg_id = res_body.get("messages", [{}])[0].get("id", "N/A")
                 print(f"✅ [WhatsApp Live Sent] Message delivered to +{target_phone} (Meta WAMID: {msg_id})")

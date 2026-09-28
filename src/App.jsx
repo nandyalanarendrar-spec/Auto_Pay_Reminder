@@ -15,14 +15,13 @@ import AutopayCountdownModal from './components/AutopayCountdownModal';
 import NotificationPermissionBanner from './components/NotificationPermissionBanner';
 import PhoneCompletionModal from './components/PhoneCompletionModal';
 import WhatsAppActivationModal from './components/WhatsAppActivationModal';
-import PersonalRemindersModal from './components/PersonalRemindersModal';
 import PersonalRemindersPage from './components/PersonalRemindersPage';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
-import { requestNotificationPermission, sendWebNotification, notifyUpcomingRenewals, fireDueReminderNotification } from './utils/browserNotifications';
+import { requestNotificationPermission, sendWebNotification, fireDueReminderNotification } from './utils/browserNotifications';
+import { initNativePushNotifications } from './utils/nativeFeatures';
 import { syncSubscriptionToCalendar, cancelSubscriptionCalendarEvent, syncEmiToCalendar, syncAllSubscriptionsToCalendar } from './utils/calendarSync';
 import { Check, ShieldAlert, Calendar } from 'lucide-react';
-
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+import { API_BASE_URL } from './config/api';
 
 // Helper: get Supabase auth token for backend API calls
 const getAuthTokenForSync = async () => {
@@ -60,7 +59,6 @@ export default function App() {
   const [selectedCountdownSub, setSelectedCountdownSub] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
-  const [isPersonalRemindersOpen, setIsPersonalRemindersOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
 
   // Theme State (Dark / Light)
@@ -308,6 +306,14 @@ export default function App() {
       return () => clearInterval(intervalId);
     }
   }, [currentUser, subscriptions, userEmis]);
+
+  // Register this device for native push notifications when running as the mobile app
+  // (no-op on web — the existing browser Notification permission banner handles that case).
+  useEffect(() => {
+    if (currentUser) {
+      initNativePushNotifications(getAuthTokenForSync);
+    }
+  }, [currentUser?.id]);
 
   // Helper toast notification
   const showToast = (msg) => {
@@ -576,7 +582,9 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: nextState })
       });
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Kill-switch backend persist failed:", e);
+    }
 
     // ★ Auto-resync calendar: kill switch ON = purge all events, OFF = recreate all events
     try {
@@ -585,7 +593,9 @@ export default function App() {
       if (token) headers['Authorization'] = `Bearer ${token}`;
       await fetch(`${API_BASE_URL}/integrations/google-calendar/sync`, { method: 'POST', headers });
       console.log(`🚨 Kill switch ${nextState ? 'ON' : 'OFF'} → calendar auto-resynced`);
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Kill-switch calendar auto-resync failed:", e);
+    }
   };
 
 
@@ -679,7 +689,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-[#080F1F] text-slate-100">
       
       {/* Soft Notification Permission Request Banner */}
-      <NotificationPermissionBanner onPermissionGranted={() => notifyUpcomingRenewals(subscriptions, userEmis)} />
+      <NotificationPermissionBanner onPermissionGranted={() => checkAndFireBackendDueReminders()} />
 
       {/* Toast Banner */}
       {toastMessage && (
@@ -902,13 +912,6 @@ export default function App() {
         onClose={() => setIsWhatsAppModalOpen(false)}
         currentUser={currentUser}
         onOpenProfile={() => setIsProfileModalOpen(true)}
-      />
-
-      {/* Personal Reminders & Multi-Time Alerts Vault Modal */}
-      <PersonalRemindersModal
-        isOpen={isPersonalRemindersOpen}
-        onClose={() => setIsPersonalRemindersOpen(false)}
-        showToast={showToast}
       />
 
       {/* Floating Bottom-Right WhatsApp Quick Activation Pill */}

@@ -233,18 +233,20 @@ class GoogleCalendarService:
         return bool(entry and entry.get("access_token"))
 
     @staticmethod
-    def get_valid_access_token(user_id: str) -> Optional[str]:
+    def get_valid_access_token(user_id: str, force_refresh: bool = False) -> Optional[str]:
         """
         Retrieves a valid access token for the specified user_id from Supabase PostgreSQL, auto-refreshing via refresh_token if expired.
+        `force_refresh=True` bypasses the cached expiry check — used when a live API call was rejected
+        with 401 despite our bookkeeping thinking the token was still valid (clock skew, manual revoke, etc).
         """
         clean_uid = str(user_id).strip('"\'')
         token_entry = _load_oauth_token_record(clean_uid)
-        
+
         if not token_entry:
             return None
 
         # Return active token if not expired
-        if time.time() < token_entry.get("expires_at", 0):
+        if not force_refresh and time.time() < token_entry.get("expires_at", 0):
             return token_entry.get("access_token")
 
         # Refresh token if expired
@@ -267,59 +269,33 @@ class GoogleCalendarService:
         try:
             with urllib.request.urlopen(req) as resp:
                 res_data = json.loads(resp.read().decode("utf-8"))
-            
+
             new_access_token = res_data.get("access_token")
             expires_in = res_data.get("expires_in", 3600)
             token_entry["access_token"] = new_access_token
             token_entry["expires_at"] = time.time() + expires_in - 60
             _save_oauth_token_record(clean_uid, token_entry)
             return new_access_token
+        except urllib.error.HTTPError as err:
+            body = ""
+            try:
+                body = err.read().decode("utf-8")
+            except Exception:
+                pass
+            print("Google token refresh error:", err, body)
+            if "invalid_grant" in body:
+                # Refresh token has been revoked/expired permanently (e.g. user removed app access,
+                # or 6+ months unused) — forget the broken connection instead of retrying forever with
+                # a token that can never work again. is_connected()/status will now correctly report
+                # "not connected" so the user is prompted to reconnect.
+                print(f"🔌 Google Calendar refresh token invalid for user {clean_uid} — disconnecting.")
+                _delete_oauth_token_record(clean_uid)
+                return None
+            return token_entry.get("access_token")
         except Exception as err:
             print("Google token refresh error:", err)
             return token_entry.get("access_token")
 
-
-    @staticmethod
-    def find_event_by_metadata(
-        user_id: str,
-        private_props: Dict[str, str],
-        calendar_id: str = "primary"
-    ) -> Optional[str]:
-        """
-        Finds a Google Calendar event ID by matching extendedProperties.private metadata key-value pairs.
-        """
-        access_token = GoogleCalendarService.get_valid_access_token(user_id)
-        if not access_token or not private_props:
-            return None
-
-        query_params = ["maxResults=250"]
-        if "subscription_id" in private_props:
-            query_params.append(f"privateExtendedProperty=subscription_id={str(private_props['subscription_id'])}")
-        elif "emi_id" in private_props:
-            query_params.append(f"privateExtendedProperty=emi_id={str(private_props['emi_id'])}")
-        else:
-            for k, v in private_props.items():
-                if v:
-                    query_params.append(f"privateExtendedProperty={k}={v}")
-
-        calendar_url = f"https://www.googleapis.com/calendar/v3/calendars/{urllib.parse.quote(calendar_id)}/events?" + "&".join(query_params)
-        req = urllib.request.Request(
-            calendar_url,
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
-        try:
-            with urllib.request.urlopen(req) as resp:
-                res_data = json.loads(resp.read().decode("utf-8"))
-            items = res_data.get("items", [])
-            for item in items:
-                if item.get("status") != "cancelled" and item.get("id"):
-                    item_private = item.get("extendedProperties", {}).get("private", {})
-                    if all(str(item_private.get(k)) == str(v) for k, v in private_props.items()):
-                        return item.get("id")
-        except Exception as err:
-            print("find_event_by_metadata note:", err)
-
-        return None
 
     @staticmethod
     def find_existing_event_id(user_id: str, title: str) -> Optional[str]:
@@ -490,6 +466,40 @@ class GoogleCalendarService:
                 "summary": summary,
                 "start_date": event_date
             }
+        except urllib.error.HTTPError as err:
+            if err.code == 401:
+                fresh_token = GoogleCalendarService.get_valid_access_token(user_id, force_refresh=True)
+                if fresh_token and fresh_token != access_token:
+                    retry_req = urllib.request.Request(
+                        calendar_url, data=data_bytes,
+                        headers={"Authorization": f"Bearer {fresh_token}", "Content-Type": "application/json"},
+                        method="POST"
+                    )
+                    try:
+                        with urllib.request.urlopen(retry_req) as resp2:
+                            res_data2 = json.loads(resp2.read().decode("utf-8"))
+                        return {
+                            "status": "SUCCESS",
+                            "success": True,
+                            "message": "Calendar event created (after token refresh)!",
+                            "event_id": res_data2.get("id"),
+                            "html_link": res_data2.get("htmlLink"),
+                            "summary": summary,
+                            "start_date": event_date
+                        }
+                    except Exception as retry_err:
+                        print("Google Calendar Create retry-after-refresh error:", retry_err)
+            print("Google Calendar API Event Creation error:", err)
+            return {
+                "status": "FAILED",
+                "success": False,
+                "error": str(err),
+                "message": f"Calendar event sync failed: {str(err)}",
+                "event_id": None,
+                "html_link": None,
+                "summary": summary,
+                "start_date": event_date
+            }
         except Exception as err:
             print("Google Calendar API Event Creation error:", err)
             return {
@@ -567,6 +577,23 @@ class GoogleCalendarService:
             with urllib.request.urlopen(req, timeout=4) as resp:
                 res_data = json.loads(resp.read().decode("utf-8"))
             return {"status": "SUCCESS", "event_id": res_data.get("id"), "html_link": res_data.get("htmlLink")}
+        except urllib.error.HTTPError as err:
+            if err.code == 401:
+                fresh_token = GoogleCalendarService.get_valid_access_token(user_id, force_refresh=True)
+                if fresh_token and fresh_token != access_token:
+                    retry_req = urllib.request.Request(
+                        calendar_url, data=data_bytes,
+                        headers={"Authorization": f"Bearer {fresh_token}", "Content-Type": "application/json"},
+                        method="POST"
+                    )
+                    try:
+                        with urllib.request.urlopen(retry_req, timeout=4) as resp2:
+                            res_data2 = json.loads(resp2.read().decode("utf-8"))
+                        return {"status": "SUCCESS", "event_id": res_data2.get("id"), "html_link": res_data2.get("htmlLink")}
+                    except Exception as retry_err:
+                        print("Custom event creation retry-after-refresh error:", retry_err)
+            print("Custom event creation note:", err)
+            return {"status": "ERROR", "message": str(err)}
         except Exception as err:
             print("Custom event creation note:", err)
             return {"status": "ERROR", "message": str(err)}
@@ -665,6 +692,22 @@ class GoogleCalendarService:
                     private_props=private_props,
                     calendar_id=calendar_id
                 )
+            if err.code == 401:
+                # Token looked valid by our own bookkeeping but Google rejected it (revoked/clock skew) —
+                # force a fresh refresh and retry once before giving up.
+                fresh_token = GoogleCalendarService.get_valid_access_token(user_id, force_refresh=True)
+                if fresh_token and fresh_token != access_token:
+                    retry_req = urllib.request.Request(
+                        calendar_url, data=data_bytes,
+                        headers={"Authorization": f"Bearer {fresh_token}", "Content-Type": "application/json"},
+                        method="PATCH"
+                    )
+                    try:
+                        with urllib.request.urlopen(retry_req) as resp2:
+                            res_data2 = json.loads(resp2.read().decode("utf-8"))
+                        return {"status": "SUCCESS", "success": True, "message": "Google Calendar event updated (after token refresh)!", "event_id": res_data2.get("id")}
+                    except Exception as retry_err:
+                        print("Google Calendar Patch retry-after-refresh error:", retry_err)
             print("Google Calendar Patch error:", err)
             return {"status": "FAILED", "success": False, "error": str(err), "message": f"Calendar patch error: {str(err)}", "event_id": event_id}
         except Exception as err:
@@ -693,6 +736,16 @@ class GoogleCalendarService:
         except urllib.error.HTTPError as err:
             if err.code in (404, 410, 403):
                 return {"message": f"Event already removed or restricted ({err.code})."}
+            if err.code == 401:
+                fresh_token = GoogleCalendarService.get_valid_access_token(user_id, force_refresh=True)
+                if fresh_token and fresh_token != access_token:
+                    retry_req = urllib.request.Request(calendar_url, headers={"Authorization": f"Bearer {fresh_token}"}, method="DELETE")
+                    try:
+                        with urllib.request.urlopen(retry_req, timeout=4) as resp2:
+                            pass
+                        return {"message": "Google Calendar event deleted successfully (after token refresh)."}
+                    except Exception as retry_err:
+                        print("Google Calendar Delete retry-after-refresh error:", retry_err)
             print("Google Calendar Delete error:", err)
             return {"message": f"Delete note: {str(err)}"}
         except Exception as err:

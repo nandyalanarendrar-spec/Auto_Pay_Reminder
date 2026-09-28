@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, ShieldCheck, Key, LogOut, X, Phone, Calendar, CreditCard, Lock, Check, AlertCircle, RefreshCw, Trash2, AlertTriangle, Edit3, Save } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { API_BASE_URL } from '../config/api';
 
 export default function UserProfileModal({ 
   isOpen, 
@@ -74,7 +75,7 @@ export default function UserProfileModal({
   const checkGoogleCalendarStatus = async () => {
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch('http://127.0.0.1:8000/api/v1/integrations/google-calendar/status', { headers });
+      const res = await fetch(`${API_BASE_URL}/integrations/google-calendar/status`, { headers });
       if (res.ok) {
         const data = await res.json();
         setCalStatus(data);
@@ -89,10 +90,14 @@ export default function UserProfileModal({
     setCalMsg(null);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch('http://127.0.0.1:8000/api/v1/integrations/google-calendar/connect', {
+      const res = await fetch(`${API_BASE_URL}/integrations/google-calendar/connect`, {
         method: 'POST',
         headers
       });
+      if (!res.ok) {
+        setCalMsg('Could not generate authorization URL.');
+        return;
+      }
       const data = await res.json();
       if (data.authorization_url) {
         window.open(data.authorization_url, '_blank', 'width=600,height=700');
@@ -112,7 +117,7 @@ export default function UserProfileModal({
     setCalMsg(null);
     try {
       const headers = await getAuthHeaders();
-      await fetch('http://127.0.0.1:8000/api/v1/integrations/google-calendar/disconnect', { method: 'POST', headers });
+      await fetch(`${API_BASE_URL}/integrations/google-calendar/disconnect`, { method: 'POST', headers });
       setCalStatus({ is_connected: false, connected_email: null });
       setCalMsg('Disconnected Google Calendar.');
     } catch (err) {
@@ -127,8 +132,8 @@ export default function UserProfileModal({
     setCalMsg(null);
     try {
       const headers = await getAuthHeaders();
-      await fetch('http://127.0.0.1:8000/api/v1/integrations/google-calendar/debug-purge', { method: 'POST', headers });
-      await fetch('http://127.0.0.1:8000/api/v1/integrations/google-calendar/sync', { method: 'POST', headers });
+      await fetch(`${API_BASE_URL}/integrations/google-calendar/debug-purge`, { method: 'POST', headers });
+      await fetch(`${API_BASE_URL}/integrations/google-calendar/sync`, { method: 'POST', headers });
       setCalMsg(`✅ Google Calendar freshly synchronized!`);
     } catch (err) {
       setCalMsg('✅ Calendar re-synchronization completed!');
@@ -211,7 +216,7 @@ export default function UserProfileModal({
         // Also update in backend database
         try {
           const headers = await getAuthHeaders();
-          await fetch('http://127.0.0.1:8000/api/v1/auth/complete-phone', {
+          await fetch(`${API_BASE_URL}/auth/complete-phone`, {
             method: 'POST',
             headers: { ...headers, 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone_number: editPhone, name: editName })
@@ -259,7 +264,7 @@ export default function UserProfileModal({
 
       // 2. Call FastAPI backend API to persist to public.users table
       const headers = await getAuthHeaders();
-      await fetch('http://127.0.0.1:8000/api/v1/auth/complete-phone', {
+      await fetch(`${API_BASE_URL}/auth/complete-phone`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: editName, phone_number: editPhone })
@@ -285,7 +290,7 @@ export default function UserProfileModal({
     setStatusMsg(null);
     try {
       const headers = await getAuthHeaders();
-      await fetch('http://127.0.0.1:8000/api/v1/auth/clear-data', {
+      await fetch(`${API_BASE_URL}/auth/clear-data`, {
         method: 'POST',
         headers
       });
@@ -312,7 +317,7 @@ export default function UserProfileModal({
     setStatusMsg(null);
     try {
       const headers = await getAuthHeaders();
-      await fetch('http://127.0.0.1:8000/api/v1/auth/me', {
+      await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'DELETE',
         headers
       });
@@ -350,7 +355,7 @@ export default function UserProfileModal({
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/change-password', {
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

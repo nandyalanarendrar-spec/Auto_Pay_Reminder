@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Phone, Shield, Check, X, Sparkles, MessageSquare, Mail, ShieldCheck } from 'lucide-react';
 import PhoneInput from './auth/PhoneInput';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { API_BASE_URL } from '../config/api';
 
 export default function PhoneCompletionModal({
   isOpen,
@@ -108,7 +109,7 @@ export default function PhoneCompletionModal({
           const headers = { 'Content-Type': 'application/json' };
           if (token) headers['Authorization'] = `Bearer ${token}`;
 
-          await fetch('http://127.0.0.1:8000/api/v1/auth/complete-phone', {
+          await fetch(`${API_BASE_URL}/auth/complete-phone`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ phone_number: formattedPhone })

@@ -57,9 +57,15 @@ def startup_db_sanity_check():
                             reminder_offsets JSONB DEFAULT '[10, 30, 60, 1440]'::jsonb,
                             calendar_event_id VARCHAR(255),
                             is_completed BOOLEAN DEFAULT false,
+                            completed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+                            sync_calendar BOOLEAN DEFAULT true,
+                            sync_whatsapp BOOLEAN DEFAULT true,
                             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                         );
                     """))
+                    conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;"))
+                    conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_calendar BOOLEAN DEFAULT true;"))
+                    conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_whatsapp BOOLEAN DEFAULT true;"))
                     conn.commit()
                     print("✅ PASS: Connected to Supabase PostgreSQL (All core tables & personal_reminders verified).")
         else:

@@ -96,12 +96,3 @@ export const fireDueReminderNotification = async (alertItem) => {
   return await sendWebNotification(title, { body, tag });
 };
 
-export const notifyUpcomingRenewals = (dueAlerts = []) => {
-  if (!Array.isArray(dueAlerts) || dueAlerts.length === 0) return;
-
-  dueAlerts.forEach(item => {
-    fireDueReminderNotification(item);
-  });
-};
-
-

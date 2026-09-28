@@ -55,7 +55,7 @@ def google_calendar_oauth_callback(
         if not res.get("success"):
             expected = res.get("expected_email", "your registered account")
             authorized = res.get("google_email", "another account")
-            return f"""
+            return HTMLResponse(status_code=400, content=f"""
             <!DOCTYPE html>
             <html>
             <head>
@@ -79,7 +79,7 @@ def google_calendar_oauth_callback(
                 </div>
             </body>
             </html>
-            """
+            """)
 
         google_email = res.get("google_email", "Google Account")
         return f"""
@@ -107,7 +107,7 @@ def google_calendar_oauth_callback(
         </html>
         """
     except Exception as e:
-        return f"<h2>OAuth Error</h2><p>{str(e)}</p>"
+        return HTMLResponse(status_code=500, content=f"<h2>OAuth Error</h2><p>{str(e)}</p>")
 
 @router.get(
     "/status",
@@ -203,6 +203,7 @@ def debug_purge_calendar(
             if not page_token:
                 break
         except Exception as e:
+            print(f"⚠️ [DEBUG PURGE] Stopped paginating calendar events early due to error: {e}")
             break
 
     print(f"\n==========================================")

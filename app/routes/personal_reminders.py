@@ -1,5 +1,6 @@
 import os
 import uuid
+import threading
 from datetime import datetime, timezone, timedelta
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -37,6 +38,9 @@ router = APIRouter(prefix="/personal-reminders", tags=["Personal Custom Reminder
 
 # In-memory storage fallback if Supabase table is pending
 _in_memory_reminders: List[Dict[str, Any]] = []
+# Guards _in_memory_reminders against concurrent access from route handlers
+# (threadpool threads) and the background scheduler (asyncio event loop thread)
+_in_memory_lock = threading.Lock()
 
 class CustomReminderCreate(BaseModel):
     title: str = Field(..., example="Electricity Bill Payment")
@@ -70,6 +74,12 @@ def format_due_datetime_ist(dt_input: str) -> str:
         return datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
     s = str(dt_input).strip()
     if "+" in s:
+        try:
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo is not None:
+                return dt.astimezone(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
+        except Exception:
+            pass
         return s
     if "Z" in s:
         s = s.replace("Z", "+00:00")
@@ -99,13 +109,14 @@ def get_personal_reminders(current_user: Optional[dict] = Depends(get_optional_c
         supabase = get_supabase_client()
         if supabase:
             res = supabase.from_("personal_reminders").select("*").eq("user_id", clean_uid).order("created_at", desc=True).execute()
-            if res.data:
+            if res.data is not None:
                 return res.data
     except Exception as e:
         print("Note: Supabase personal_reminders table read note:", e)
 
     # Fallback in-memory query
-    return [r for r in _in_memory_reminders if str(r.get("user_id")) == clean_uid]
+    with _in_memory_lock:
+        return [r for r in _in_memory_reminders if str(r.get("user_id")) == clean_uid]
 
 @router.post("", response_model=Dict[str, Any], status_code=status.HTTP_201_CREATED)
 def create_personal_reminder(
@@ -120,7 +131,10 @@ def create_personal_reminder(
     now_iso = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
 
     # Sort and clean offsets (ensure unique positive integers)
-    offsets = sorted(list(set([int(x) for x in data.reminder_offsets if int(x) >= 0])))
+    try:
+        offsets = sorted(list(set([int(x) for x in data.reminder_offsets if int(x) >= 0])))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="reminder_offsets must be a list of non-negative integers.")
     if not offsets:
         offsets = [30]
 
@@ -187,10 +201,12 @@ def create_personal_reminder(
         if supabase:
             supabase.from_("personal_reminders").insert(record).execute()
         else:
-            _in_memory_reminders.insert(0, record)
+            with _in_memory_lock:
+                _in_memory_reminders.insert(0, record)
     except Exception as e:
         print("Note: Supabase insert personal_reminders fallback to memory:", e)
-        _in_memory_reminders.insert(0, record)
+        with _in_memory_lock:
+            _in_memory_reminders.insert(0, record)
 
     return record
 
@@ -207,6 +223,7 @@ def delete_personal_reminder(
 
     old_cal_id = None
     supabase = get_supabase_client()
+    supabase_delete_failed = False
     if supabase:
         try:
             res = supabase.from_("personal_reminders").select("calendar_event_id").eq("id", reminder_id).execute()
@@ -215,14 +232,19 @@ def delete_personal_reminder(
             supabase.from_("personal_reminders").delete().eq("id", reminder_id).execute()
         except Exception as e:
             print("Supabase delete note:", e)
+            supabase_delete_failed = True
 
-    if not old_cal_id:
-        for r in _in_memory_reminders:
-            if r.get("id") == reminder_id:
-                old_cal_id = r.get("calendar_event_id")
-                break
+    with _in_memory_lock:
+        if supabase_delete_failed and not any(r.get("id") == reminder_id for r in _in_memory_reminders):
+            raise HTTPException(status_code=500, detail="Failed to delete personal reminder from database.")
 
-    _in_memory_reminders = [r for r in _in_memory_reminders if not (r.get("id") == reminder_id)]
+        if not old_cal_id:
+            for r in _in_memory_reminders:
+                if r.get("id") == reminder_id:
+                    old_cal_id = r.get("calendar_event_id")
+                    break
+
+        _in_memory_reminders = [r for r in _in_memory_reminders if not (r.get("id") == reminder_id)]
 
     try:
         GoogleCalendarService.delete_event_by_id_or_metadata(
@@ -247,7 +269,10 @@ def update_personal_reminder(
         user_id = current_user.get("id") if isinstance(current_user, dict) else getattr(current_user, "id", "default_user")
     clean_uid = get_clean_uuid(user_id)
 
-    offsets = sorted(list(set([int(x) for x in data.reminder_offsets if int(x) >= 0])))
+    try:
+        offsets = sorted(list(set([int(x) for x in data.reminder_offsets if int(x) >= 0])))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="reminder_offsets must be a list of non-negative integers.")
     if not offsets:
         offsets = [30]
 
@@ -278,10 +303,11 @@ def update_personal_reminder(
             pass
 
     if not old_cal_id:
-        for r in _in_memory_reminders:
-            if r.get("id") == reminder_id:
-                old_cal_id = r.get("calendar_event_id")
-                break
+        with _in_memory_lock:
+            for r in _in_memory_reminders:
+                if r.get("id") == reminder_id:
+                    old_cal_id = r.get("calendar_event_id")
+                    break
 
     try:
         GoogleCalendarService.delete_event_by_id_or_metadata(
@@ -323,6 +349,7 @@ def update_personal_reminder(
     }
 
     updated_record = None
+    supabase_update_failed = False
     if supabase:
         try:
             res = supabase.from_("personal_reminders").update(updated_fields).eq("id", reminder_id).execute()
@@ -330,23 +357,28 @@ def update_personal_reminder(
                 updated_record = res.data[0]
         except Exception as e:
             print("Supabase update note:", e)
+            supabase_update_failed = True
 
-    for r in _in_memory_reminders:
-        if r.get("id") == reminder_id:
-            r.update(updated_fields)
-            if not updated_record:
-                updated_record = dict(r)
-            break
+    with _in_memory_lock:
+        if supabase_update_failed and not any(r.get("id") == reminder_id for r in _in_memory_reminders):
+            raise HTTPException(status_code=500, detail="Failed to update personal reminder in database.")
 
-    if not updated_record:
-        updated_record = {
-            "id": reminder_id,
-            "user_id": clean_uid,
-            "is_completed": False,
-            "created_at": datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30"),
-            **updated_fields
-        }
-        _in_memory_reminders.insert(0, updated_record)
+        for r in _in_memory_reminders:
+            if r.get("id") == reminder_id:
+                r.update(updated_fields)
+                if not updated_record:
+                    updated_record = dict(r)
+                break
+
+        if not updated_record:
+            updated_record = {
+                "id": reminder_id,
+                "user_id": clean_uid,
+                "is_completed": False,
+                "created_at": datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30"),
+                **updated_fields
+            }
+            _in_memory_reminders.insert(0, updated_record)
 
     return updated_record
 
@@ -364,6 +396,7 @@ def toggle_complete_personal_reminder(
     current_completed = True
     cal_event_id = None
     reminder_data = None
+    supabase_update_failed = False
     supabase = get_supabase_client()
     if supabase:
         try:
@@ -380,23 +413,29 @@ def toggle_complete_personal_reminder(
             supabase.from_("personal_reminders").update(update_fields).eq("id", reminder_id).execute()
         except Exception as e:
             print("Supabase toggle completion note:", e)
+            if reminder_data is not None:
+                supabase_update_failed = True
 
-    if not reminder_data:
+    with _in_memory_lock:
+        if not reminder_data:
+            for r in _in_memory_reminders:
+                if r.get("id") == reminder_id:
+                    reminder_data = r
+                    current_completed = not bool(r.get("is_completed", False))
+                    cal_event_id = r.get("calendar_event_id")
+                    break
+
+        if supabase_update_failed:
+            raise HTTPException(status_code=500, detail="Failed to update personal reminder completion status in database.")
+
         for r in _in_memory_reminders:
             if r.get("id") == reminder_id:
-                reminder_data = r
-                current_completed = not bool(r.get("is_completed", False))
-                cal_event_id = r.get("calendar_event_id")
+                r["is_completed"] = current_completed
+                if current_completed:
+                    r["completed_at"] = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
+                else:
+                    r["completed_at"] = None
                 break
-
-    for r in _in_memory_reminders:
-        if r.get("id") == reminder_id:
-            r["is_completed"] = current_completed
-            if current_completed:
-                r["completed_at"] = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
-            else:
-                r["completed_at"] = None
-            break
 
     # 1. If task is now COMPLETED, delete the connected event from Google Calendar
     if current_completed:
@@ -436,10 +475,11 @@ def toggle_complete_personal_reminder(
                     new_cal_id = cal_res.get("event_id")
                     if supabase:
                         supabase.from_("personal_reminders").update({"calendar_event_id": new_cal_id}).eq("id", reminder_id).execute()
-                    for r in _in_memory_reminders:
-                        if r.get("id") == reminder_id:
-                            r["calendar_event_id"] = new_cal_id
-                            break
+                    with _in_memory_lock:
+                        for r in _in_memory_reminders:
+                            if r.get("id") == reminder_id:
+                                r["calendar_event_id"] = new_cal_id
+                                break
                     print(f"📅 Re-synced Google Calendar event '{new_cal_id}' for reactivated task '{reminder_id}'.")
             except Exception as re_err:
                 print("Re-sync calendar event on reactivate note:", re_err)

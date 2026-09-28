@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bell, ShieldAlert, CheckCircle2, Clock, X, Volume2, Power, AlertTriangle, Sparkles } from 'lucide-react';
 import { requestNotificationPermission, sendWebNotification } from '../utils/browserNotifications';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { API_BASE_URL } from '../config/api';
 
 export default function NotificationsCenterModal({
   isOpen,
@@ -49,7 +50,7 @@ export default function NotificationsCenterModal({
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      await fetch('http://127.0.0.1:8000/api/v1/whatsapp/send-test', {
+      await fetch(`${API_BASE_URL}/whatsapp/send-test`, {
         method: 'POST',
         headers,
         body: JSON.stringify({})

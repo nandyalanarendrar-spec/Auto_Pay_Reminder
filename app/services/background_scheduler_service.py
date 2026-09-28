@@ -71,7 +71,7 @@ def run_high_frequency_personal_reminders_sweep():
         from app.services.notification_log_service import NotificationLogService
         from app.services.firebase_notification_service import FirebaseNotificationService
         from app.services.whatsapp_service import WhatsAppService
-        from app.routes.personal_reminders import _in_memory_reminders
+        from app.routes.personal_reminders import _in_memory_reminders, _in_memory_lock
         from datetime import datetime, date, timezone
 
         today_iso = date.today().isoformat()
@@ -89,7 +89,8 @@ def run_high_frequency_personal_reminders_sweep():
             pass
 
         if not reminders:
-            reminders = [r for r in _in_memory_reminders if not r.get("is_completed")]
+            with _in_memory_lock:
+                reminders = [r for r in _in_memory_reminders if not r.get("is_completed")]
 
         for rem in reminders:
             due_str = rem.get("due_datetime")
@@ -97,9 +98,10 @@ def run_high_frequency_personal_reminders_sweep():
                 continue
 
             try:
-                clean_due = str(due_str).replace("Z", "").split("+")[0]
-                due_dt = datetime.fromisoformat(clean_due)
-                now_compare = datetime.now()
+                due_dt = datetime.fromisoformat(str(due_str).replace("Z", "+00:00"))
+                if due_dt.tzinfo is None:
+                    due_dt = due_dt.replace(tzinfo=IST)
+                now_compare = datetime.now(IST)
                 diff_seconds = (due_dt - now_compare).total_seconds()
                 rem_mins = max(0, int(round(diff_seconds / 60.0)))
                 user_offsets = rem.get("reminder_offsets") or [10, 30, 60]
@@ -108,11 +110,14 @@ def run_high_frequency_personal_reminders_sweep():
                 due_time_str = due_dt.strftime("%I:%M %p, %a %d %b")
 
                 # --- 1. APP PUSH NOTIFICATIONS: User selected offsets + Guaranteed exact due time (0m) ---
+                # Threshold-based (not a narrow window): fires as soon as the countdown has crossed at
+                # or below the offset mark and hasn't been logged yet, so a delayed/restarted sweep still
+                # "catches up" on a missed offset instead of skipping it forever. Bounded below at -120s
+                # (the auto-complete cutoff) so a very stale reminder doesn't fire retroactively.
                 app_push_offsets = sorted(list(set(user_offsets + [0])))
                 for offset_mins in app_push_offsets:
                     offset_secs = offset_mins * 60
-                    # Firing window: trigger when diff_seconds is between offset_secs - 30 and offset_secs + 5
-                    if (offset_secs - 30) <= diff_seconds <= (offset_secs + 5):
+                    if -120 <= diff_seconds <= (offset_secs + 5):
                         rem_id = str(rem.get("id"))
                         notif_type = f"offset_{offset_mins}m_push"
 
@@ -135,25 +140,30 @@ def run_high_frequency_personal_reminders_sweep():
                             print(f"🔔 [APP PUSH FIRED] Task: '{task_title}' ({push_title})")
 
                 # --- 2. WHATSAPP ALERT: Fixed 1 Hour Before ONLY (60m before) if WhatsApp enabled ---
+                # Same threshold-based catch-up approach as the app push above.
                 sync_wa = rem.get("sync_whatsapp") if rem.get("sync_whatsapp") is not None else True
                 if sync_wa:
                     wa_offset_secs = 60 * 60 # Fixed 1 hour before
-                    if (wa_offset_secs - 45) <= diff_seconds <= (wa_offset_secs + 15):
+                    if -120 <= diff_seconds <= (wa_offset_secs + 15):
                         rem_id = str(rem.get("id"))
                         notif_type = "offset_60m_whatsapp"
 
                         if not NotificationLogService.is_already_notified(user_id, "personal_reminder", rem_id, notif_type, today_iso):
                             target_phone = getattr(settings, "WHATSAPP_TEST_RECIPIENT", "") or "919014220155"
+                            time_label = f"{rem_mins} minutes" if rem_mins < 60 else f"{rem_mins // 60} hour(s)"
                             wa_body = (
                                 f"⚡ *Autopay Guard Task Alert (1 Hour Reminder)*\n\n"
                                 f"Task: *{task_title}*\n"
-                                f"Status: Due in *1 Hour* (at {due_time_str})\n"
+                                f"Status: Due in *{time_label}* (at {due_time_str})\n"
                                 f"Notes: {rem.get('notes') or 'None'}\n\n"
                                 f"🛡️ *Autopay Guard Safety Assistant*"
                             )
-                            WhatsAppService.send_whatsapp_message(to_phone=target_phone, text_body=wa_body)
-                            NotificationLogService.log_notification(user_id, "personal_reminder", rem_id, notif_type, "whatsapp")
-                            print(f"💬 [WHATSAPP FIRED 1H BEFORE] Task: '{task_title}' -> Sent WhatsApp Alert!")
+                            wa_result = WhatsAppService.send_whatsapp_message(to_phone=target_phone, text_body=wa_body)
+                            if wa_result.get("status") != "error":
+                                NotificationLogService.log_notification(user_id, "personal_reminder", rem_id, notif_type, "whatsapp")
+                                print(f"💬 [WHATSAPP FIRED 1H BEFORE] Task: '{task_title}' -> Sent WhatsApp Alert!")
+                            else:
+                                print(f"⚠️ [WHATSAPP SEND FAILED] Task: '{task_title}' -> will retry next sweep: {wa_result.get('error')}")
 
                 # --- 3. AUTO-COMPLETE ELAPSED TASKS & PURGE GOOGLE CALENDAR EVENT ---
                 if diff_seconds < -120 and not rem.get("is_completed"):
@@ -167,10 +177,12 @@ def run_high_frequency_personal_reminders_sweep():
                             }).eq("id", rem_id).execute()
                         rem["is_completed"] = True
                         rem["completed_at"] = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
-                        for mem_r in _in_memory_reminders:
-                            if mem_r.get("id") == rem_id:
-                                mem_r["is_completed"] = True
-                                break
+                        with _in_memory_lock:
+                            for mem_r in _in_memory_reminders:
+                                if mem_r.get("id") == rem_id:
+                                    mem_r["is_completed"] = True
+                                    mem_r["completed_at"] = rem["completed_at"]
+                                    break
                         
                         from app.services.google_calendar_service import GoogleCalendarService
                         GoogleCalendarService.delete_event_by_id_or_metadata(
@@ -195,7 +207,7 @@ def run_completed_tasks_auto_purge():
     """
     try:
         from app.core.security import get_supabase_client
-        from app.routes.personal_reminders import _in_memory_reminders
+        from app.routes.personal_reminders import _in_memory_reminders, _in_memory_lock
 
         now = datetime.now(IST)
         cutoff = now - timedelta(hours=24)
@@ -223,21 +235,22 @@ def run_completed_tasks_auto_purge():
             print("Auto-purge Supabase error:", db_err)
 
         # 2. Purge from in-memory fallback
-        before_count = len(_in_memory_reminders)
-        ids_to_remove = []
-        for r in _in_memory_reminders:
-            if r.get("is_completed") and r.get("completed_at"):
-                try:
-                    comp_str = str(r["completed_at"]).split("+")[0]
-                    comp_dt = datetime.fromisoformat(comp_str)
-                    if comp_dt < cutoff.replace(tzinfo=None):
-                        ids_to_remove.append(r.get("id"))
-                        purged_count += 1
-                except Exception:
-                    pass
+        with _in_memory_lock:
+            ids_to_remove = []
+            for r in _in_memory_reminders:
+                if r.get("is_completed") and r.get("completed_at"):
+                    try:
+                        comp_dt = datetime.fromisoformat(str(r["completed_at"]).replace("Z", "+00:00"))
+                        if comp_dt.tzinfo is None:
+                            comp_dt = comp_dt.replace(tzinfo=IST)
+                        if comp_dt < cutoff:
+                            ids_to_remove.append(r.get("id"))
+                            purged_count += 1
+                    except Exception:
+                        pass
 
-        if ids_to_remove:
-            _in_memory_reminders[:] = [r for r in _in_memory_reminders if r.get("id") not in ids_to_remove]
+            if ids_to_remove:
+                _in_memory_reminders[:] = [r for r in _in_memory_reminders if r.get("id") not in ids_to_remove]
 
         if purged_count > 0:
             print(f"✅ [AUTO-PURGE] Cleaned up {purged_count} completed task(s) older than 24 hours.")

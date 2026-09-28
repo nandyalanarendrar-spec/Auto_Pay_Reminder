@@ -18,6 +18,8 @@ import {
   Wrench,
   Clock
 } from 'lucide-react';
+import { saveFileToDevice } from '../utils/nativeFeatures';
+import { API_BASE_URL } from '../config/api';
 
 export default function Navbar({ 
   currentUser, 
@@ -56,18 +58,18 @@ export default function Navbar({
   const handleExport = async (format) => {
     setIsToolsDropdownOpen(false);
     const uid = currentUser?.id || 'default_user';
-    const reportUrl = `http://127.0.0.1:8000/api/v1/reports/export?format=${format}&user_id=${uid}`;
+    const reportUrl = `${API_BASE_URL}/reports/export?format=${format}&user_id=${uid}`;
     try {
       const response = await fetch(reportUrl);
+      if (!response.ok) {
+        window.open(reportUrl, '_blank');
+        return;
+      }
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `autopay_guard_${format === 'csv' ? 'report.csv' : 'summary.pdf'}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      const filename = `autopay_guard_${format === 'csv' ? 'report.csv' : 'summary.pdf'}`;
+      // On the native app this saves into the device's Documents folder instead of relying on
+      // a browser-only download link, which doesn't work the same way inside a WebView.
+      await saveFileToDevice(blob, filename);
     } catch (err) {
       window.open(reportUrl, '_blank');
     }

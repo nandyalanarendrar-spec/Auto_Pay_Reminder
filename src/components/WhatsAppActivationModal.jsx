@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, ExternalLink, Send, CheckCircle2, AlertCircle, X, ShieldCheck, Sparkles, Smartphone, Edit3 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { API_BASE_URL } from '../config/api';
 
 export default function WhatsAppActivationModal({
   isOpen,
@@ -39,7 +40,7 @@ export default function WhatsAppActivationModal({
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch('http://127.0.0.1:8000/api/v1/whatsapp/send-test', {
+      const res = await fetch(`${API_BASE_URL}/whatsapp/send-test`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ phone_number: userPhone !== 'Not registered' ? userPhone : null })

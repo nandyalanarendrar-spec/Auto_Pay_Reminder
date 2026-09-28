@@ -19,29 +19,8 @@ import {
   CreditCard
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
-
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
-
-const parseLocalDate = (dateStr) => {
-  if (!dateStr) return new Date();
-  const str = String(dateStr);
-  if (str.endsWith('Z') || str.includes('+00:00') || str.includes('+0000')) {
-    const parsedUtc = new Date(str);
-    if (!isNaN(parsedUtc.getTime())) return parsedUtc;
-  }
-  const cleanStr = str.replace('Z', '').split('+')[0];
-  const parts = cleanStr.split(/[-T:\s]/);
-  if (parts.length >= 5) {
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const day = parseInt(parts[2], 10);
-    const hour = parseInt(parts[3], 10);
-    const minute = parseInt(parts[4], 10);
-    const second = parts[5] ? parseInt(parts[5], 10) : 0;
-    return new Date(year, month, day, hour, minute, second);
-  }
-  return new Date(dateStr);
-};
+import { parseLocalDate } from './PersonalRemindersPage';
+import { API_BASE_URL } from '../config/api';
 
 export default function PersonalReminderCountdownModal({
   isOpen,
@@ -104,7 +83,8 @@ export default function PersonalReminderCountdownModal({
   const handleTriggerWhatsAppMessage = async () => {
     const taskTitle = reminder.title || 'Task Reminder';
     const dueFormatted = reminder.due_datetime
-      ? new Date(reminder.due_datetime).toLocaleString('en-IN', {
+      ? parseLocalDate(reminder.due_datetime).toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata',
           weekday: 'short',
           day: 'numeric',
           month: 'short',
@@ -327,7 +307,7 @@ export default function PersonalReminderCountdownModal({
                 ) : (
                   <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-950/90 text-emerald-400 border border-emerald-500/50 uppercase tracking-wider flex items-center space-x-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>AUTOPAY ON</span>
+                    <span>TASK ACTIVE</span>
                   </span>
                 )}
               </div>

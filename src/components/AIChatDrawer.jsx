@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Sparkles, Send, Bot, User, Zap, MessageCircle, ArrowRight } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+import { API_BASE_URL } from '../config/api';
 
 /* ── Animated Typing Dots ─────────────────────────────── */
 function TypingDots() {

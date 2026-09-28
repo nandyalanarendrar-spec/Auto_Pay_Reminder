@@ -148,6 +148,7 @@ def complete_phone_number(payload: dict, current_user: dict = Depends(get_curren
         raise HTTPException(status_code=400, detail="phone_number is required.")
 
     supabase = get_supabase_client()
+    db_update_failed = False
     try:
         if supabase:
             metadata_update = {"phone_number": phone_number}
@@ -164,17 +165,22 @@ def complete_phone_number(payload: dict, current_user: dict = Depends(get_curren
                     supabase.auth.update_user({"data": metadata_update})
                 except Exception:
                     pass
-            
+
             try:
                 db_update = {"phone_number": phone_number}
                 if name:
                     db_update["name"] = name
                 supabase.from_("users").update(db_update).eq("id", user_id).execute()
-            except Exception:
-                pass
+            except Exception as db_err:
+                print("Profile phone_number DB update failed:", db_err)
+                db_update_failed = True
 
         AuditLoggerService.log_action(user_id, "PROFILE_UPDATED", details={"phone_number": phone_number, "name": name})
+        if db_update_failed:
+            raise HTTPException(status_code=500, detail="Failed to save phone number — WhatsApp alerts may not target the new number. Please try again.")
         return {"message": "Profile details updated successfully for WhatsApp alerts!", "phone_number": phone_number, "name": name}
+    except HTTPException:
+        raise
     except Exception as e:
         return {"message": f"Profile updated (Local Session): {str(e)}", "phone_number": phone_number, "name": name}
 

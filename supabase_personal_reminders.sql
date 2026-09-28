@@ -16,11 +16,15 @@ CREATE TABLE IF NOT EXISTS public.personal_reminders (
     calendar_event_id VARCHAR(255),
     is_completed BOOLEAN DEFAULT false,
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    sync_calendar BOOLEAN DEFAULT true,
+    sync_whatsapp BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Migration: Add completed_at column if table already exists
+-- Migration: Add columns if table already exists from an earlier version
 ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
+ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_calendar BOOLEAN DEFAULT true;
+ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_whatsapp BOOLEAN DEFAULT true;
 
 -- Index for fast user scoping
 CREATE INDEX IF NOT EXISTS idx_personal_reminders_user ON public.personal_reminders(user_id);

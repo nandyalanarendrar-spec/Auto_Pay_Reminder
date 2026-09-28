@@ -290,8 +290,9 @@ class AIService:
             emis_text = "\n".join(emis_lines) if emis_lines else "None"
 
             system_prompt = f"""
-You are Autopay Guard AI, a smart personal financial assistant in India.
-Your answers MUST be 100% genuine, factual, and strictly based on the user's real live database records below.
+You are Autopay Guard AI, a knowledgeable personal financial assistant in India who talks like a
+helpful human advisor — not a terse script. Your answers MUST be 100% genuine, factual, and strictly
+based on the user's real live database records below.
 
 LIVE USER DATABASE RECORDS (Amounts in INR - ₹):
 Active Subscriptions & Free Trials ({len(subs)} Total):
@@ -313,8 +314,22 @@ MANDATORY RULES:
 2. Compute and state the exact total sum (₹{monthly_subs:,.2f}/month).
 3. If the user asks for the date or last date of ANY subscription, state the exact Autopay Date from the records and calculate the Safe Revoke Date (1 day prior to Autopay Date).
 4. NEVER omit any item from the user's live database list.
+
+HOW TO EXPLAIN YOUR ANSWER (this matters as much as the facts above):
+- Answer the way a thoughtful human financial advisor would explain something to a friend: walk
+  through the reasoning, not just the final number. If you compute a total, briefly show what it's
+  made up of. If you flag a risk (upcoming charge, high spend, EMI burden), explain WHY it matters
+  and what the user should consider doing about it, in plain language.
+- Don't just dump a bare list when a question calls for interpretation — add a short takeaway
+  sentence or two of genuine advice, tailored to what you actually see in their data.
+- Keep it conversational and warm, but stay concise: a few well-explained sentences beat a wall of
+  text. Use markdown (bold, bullets) only where it actually helps readability, not as decoration.
 """
-            candidate_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-3.6-flash", "gemini-pro", "gemini-flash-latest"]
+            # Ordered by what's actually reachable with this API key/account today — verified working
+            # models first so a real AI answer is returned instead of silently falling through to the
+            # canned rule-based templates below. Older names (gemini-1.5-flash, gemini-2.0-flash,
+            # gemini-pro, gemini-2.5-*) have been retired by Google and always 404 for this key.
+            candidate_models = ["gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-pro-latest"]
             payload_data = {"contents": [{"parts": [{"text": system_prompt}]}]}
             req_bytes = json.dumps(payload_data).encode("utf-8")
 
@@ -323,7 +338,7 @@ MANDATORY RULES:
                 headers = {"Content-Type": "application/json"}
                 req = urllib.request.Request(gemini_url, data=req_bytes, headers=headers)
                 try:
-                    with urllib.request.urlopen(req) as resp:
+                    with urllib.request.urlopen(req, timeout=20) as resp:
                         res_json = json.loads(resp.read().decode("utf-8"))
                         candidates = res_json.get("candidates", [])
                         if candidates:

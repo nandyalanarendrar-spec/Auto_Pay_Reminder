@@ -6,6 +6,7 @@ import ForgotPasswordView from './ForgotPasswordView';
 import EmailVerificationView from './EmailVerificationView';
 import ResetPasswordView from './ResetPasswordView';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
+import { API_BASE_URL } from '../../config/api';
 
 export default function AuthContainer({ onAuthenticated, onPasswordResetStarted, onPasswordResetComplete }) {
   const [currentScreen, setCurrentScreen] = useState('login');
@@ -46,7 +47,7 @@ export default function AuthContainer({ onAuthenticated, onPasswordResetStarted,
 
     // 1. Try FastAPI backend signup (sends OTP email for verification)
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/auth/signup', {
+      const res = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
