@@ -296,7 +296,7 @@ export default function PersonalReminderCountdownModal({
     }
   };
 
-  const isModalTaskDone = reminder.is_completed || (reminder.due_datetime && (parseLocalDate(reminder.due_datetime) - new Date()) <= 0);
+  const isModalTaskDone = Boolean(reminder.is_completed);
 
   // Initial letter for Avatar
   const initialLetter = reminder.title ? reminder.title.charAt(0).toUpperCase() : 'P';

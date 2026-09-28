@@ -155,10 +155,95 @@ def run_high_frequency_personal_reminders_sweep():
                             NotificationLogService.log_notification(user_id, "personal_reminder", rem_id, notif_type, "whatsapp")
                             print(f"💬 [WHATSAPP FIRED 1H BEFORE] Task: '{task_title}' -> Sent WhatsApp Alert!")
 
+                # --- 3. AUTO-COMPLETE ELAPSED TASKS & PURGE GOOGLE CALENDAR EVENT ---
+                if diff_seconds < -120 and not rem.get("is_completed"):
+                    rem_id = str(rem.get("id"))
+                    cal_ev_id = rem.get("calendar_event_id")
+                    try:
+                        if supabase:
+                            supabase.from_("personal_reminders").update({
+                                "is_completed": True,
+                                "completed_at": datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
+                            }).eq("id", rem_id).execute()
+                        rem["is_completed"] = True
+                        rem["completed_at"] = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
+                        for mem_r in _in_memory_reminders:
+                            if mem_r.get("id") == rem_id:
+                                mem_r["is_completed"] = True
+                                break
+                        
+                        from app.services.google_calendar_service import GoogleCalendarService
+                        GoogleCalendarService.delete_event_by_id_or_metadata(
+                            user_id=user_id,
+                            event_id=cal_ev_id,
+                            private_props={"personal_reminder_id": rem_id}
+                        )
+                        print(f"✅ [AUTO-COMPLETED ELAPSED TASK] '{task_title}' (ID: {rem_id}) -> Marked completed & purged from Google Calendar!")
+                    except Exception as auto_comp_err:
+                        print("Auto-complete elapsed task error:", auto_comp_err)
+
             except Exception as item_err:
                 print("Item check error:", item_err)
     except Exception as e:
         print("Personal reminders sweep error:", e)
+
+
+def run_completed_tasks_auto_purge():
+    """
+    Auto-purge sweep: Deletes completed personal reminders that were completed more than 24 hours ago.
+    Keeps completed tasks visible in the 'Completed History' section for 1 day before cleanup.
+    """
+    try:
+        from app.core.security import get_supabase_client
+        from app.routes.personal_reminders import _in_memory_reminders
+
+        now = datetime.now(IST)
+        cutoff = now - timedelta(hours=24)
+        cutoff_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%S+05:30")
+
+        purged_count = 0
+
+        # 1. Purge from Supabase DB
+        try:
+            supabase = get_supabase_client()
+            if supabase:
+                # Fetch completed tasks with completed_at older than 24 hours
+                res = supabase.from_("personal_reminders").select("id, title, completed_at").eq("is_completed", True).lt("completed_at", cutoff_iso).execute()
+                if res.data:
+                    for row in res.data:
+                        task_id = row.get("id")
+                        task_title = row.get("title", "Unknown")
+                        try:
+                            supabase.from_("personal_reminders").delete().eq("id", task_id).execute()
+                            purged_count += 1
+                            print(f"🗑️ [AUTO-PURGE] Deleted completed task '{task_title}' (ID: {task_id}) — completed 24+ hours ago.")
+                        except Exception as del_err:
+                            print(f"Auto-purge delete error for {task_id}: {del_err}")
+        except Exception as db_err:
+            print("Auto-purge Supabase error:", db_err)
+
+        # 2. Purge from in-memory fallback
+        before_count = len(_in_memory_reminders)
+        ids_to_remove = []
+        for r in _in_memory_reminders:
+            if r.get("is_completed") and r.get("completed_at"):
+                try:
+                    comp_str = str(r["completed_at"]).split("+")[0]
+                    comp_dt = datetime.fromisoformat(comp_str)
+                    if comp_dt < cutoff.replace(tzinfo=None):
+                        ids_to_remove.append(r.get("id"))
+                        purged_count += 1
+                except Exception:
+                    pass
+
+        if ids_to_remove:
+            _in_memory_reminders[:] = [r for r in _in_memory_reminders if r.get("id") not in ids_to_remove]
+
+        if purged_count > 0:
+            print(f"✅ [AUTO-PURGE] Cleaned up {purged_count} completed task(s) older than 24 hours.")
+
+    except Exception as e:
+        print(f"Auto-purge sweep error: {e}")
 
 
 async def _background_loop(interval_seconds: int = 15):
@@ -190,6 +275,7 @@ async def _background_loop(interval_seconds: int = 15):
             if counter >= 3600: # Every 1 hour
                 counter = 0
                 run_daily_rollover_sweep()
+                run_completed_tasks_auto_purge()
 
         except asyncio.CancelledError:
             print("🛑 [Background Scheduler] Background task cancelled gracefully.")

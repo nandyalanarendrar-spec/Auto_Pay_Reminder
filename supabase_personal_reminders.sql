@@ -15,8 +15,12 @@ CREATE TABLE IF NOT EXISTS public.personal_reminders (
     reminder_offsets JSONB DEFAULT '[10, 30, 60, 1440]'::jsonb,
     calendar_event_id VARCHAR(255),
     is_completed BOOLEAN DEFAULT false,
+    completed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Migration: Add completed_at column if table already exists
+ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
 
 -- Index for fast user scoping
 CREATE INDEX IF NOT EXISTS idx_personal_reminders_user ON public.personal_reminders(user_id);

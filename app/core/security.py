@@ -1,7 +1,22 @@
-from typing import Optional
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from supabase import create_client, Client
+from typing import Optional, Any
+
+try:
+    from fastapi import Depends, HTTPException, status
+    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+except ImportError:
+    def Depends(f=None): return None
+    class HTTPException(Exception): pass
+    class status: HTTP_401_UNAUTHORIZED = 401
+    class HTTPBearer:
+        def __init__(self, **kw): pass
+    class HTTPAuthorizationCredentials: pass
+
+try:
+    from supabase import create_client, Client
+except ImportError:
+    create_client = None
+    Client = Any
+
 from app.core.config import settings
 
 security = HTTPBearer(auto_error=False)
@@ -12,6 +27,8 @@ _supabase_client: Optional[Client] = None
 def get_supabase_client() -> Client:
     global _supabase_client
     if _supabase_client is None:
+        if create_client is None:
+            return None
         _supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
     return _supabase_client
 

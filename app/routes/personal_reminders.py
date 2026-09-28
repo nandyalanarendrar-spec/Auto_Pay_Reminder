@@ -4,8 +4,31 @@ from datetime import datetime, timezone, timedelta
 
 IST = timezone(timedelta(hours=5, minutes=30))
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+
+try:
+    from pydantic import BaseModel, Field
+except ImportError:
+    class BaseModel:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+    def Field(default=None, **kwargs):
+        return default
+
+try:
+    from fastapi import APIRouter, Depends, HTTPException, status, Body
+except ImportError:
+    class APIRouter:
+        def __init__(self, **kwargs): pass
+        def get(self, *a, **kw): return lambda f: f
+        def post(self, *a, **kw): return lambda f: f
+        def put(self, *a, **kw): return lambda f: f
+        def patch(self, *a, **kw): return lambda f: f
+        def delete(self, *a, **kw): return lambda f: f
+    def Depends(f=None): return None
+    class status:
+        HTTP_201_CREATED = 201
+    class HTTPException(Exception): pass
 
 from app.core.security import get_current_user, get_optional_current_user, get_supabase_client
 from app.services.google_calendar_service import GoogleCalendarService
@@ -41,6 +64,29 @@ def get_clean_uuid(user_id_val: Any) -> str:
         return str(val)
     except ValueError:
         return "00000000-0000-0000-0000-000000000000"
+
+def format_due_datetime_ist(dt_input: str) -> str:
+    if not dt_input:
+        return datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
+    s = str(dt_input).strip()
+    if "+" in s:
+        return s
+    if "Z" in s:
+        s = s.replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(s).astimezone(IST)
+            return dt.strftime("%Y-%m-%dT%H:%M:%S+05:30")
+        except Exception:
+            s = s.replace("+00:00", "")
+    if "T" in s:
+        parts = s.split("T")
+        time_parts = parts[1].split(":")
+        if len(time_parts) == 2:
+            time_part = f"{parts[1]}:00"
+        else:
+            time_part = parts[1]
+        return f"{parts[0]}T{time_part}+05:30"
+    return f"{s}T00:00:00+05:30"
 
 @router.get("", response_model=List[Dict[str, Any]])
 def get_personal_reminders(current_user: Optional[dict] = Depends(get_optional_current_user)):
@@ -80,12 +126,14 @@ def create_personal_reminder(
 
     highest_offset = max(offsets)
 
+    formatted_due_ist = format_due_datetime_ist(data.due_datetime)
+
     calendar_event_id = None
     if data.sync_calendar:
         try:
             # Sync to Google Calendar with highest selected offset popup override
             event_title = f"⏰ {data.title}"
-            event_desc = f"Autopay Guard Personal Reminder\nTask: {data.title}\nDue: {data.due_datetime}\nNotes: {data.notes or 'None'}"
+            event_desc = f"Autopay Guard Personal Reminder\nTask: {data.title}\nDue: {formatted_due_ist}\nNotes: {data.notes or 'None'}"
             
             # Single popup alert override set to the HIGHEST user-selected notification time
             overrides = [{"method": "popup", "minutes": highest_offset}]
@@ -93,7 +141,7 @@ def create_personal_reminder(
             cal_res = GoogleCalendarService.create_custom_calendar_event(
                 user_id=clean_uid,
                 title=event_title,
-                event_datetime=data.due_datetime,
+                event_datetime=formatted_due_ist,
                 description=event_desc,
                 reminder_overrides=overrides,
                 private_props={"personal_reminder_id": reminder_id}
@@ -106,14 +154,14 @@ def create_personal_reminder(
     # Safety check: WhatsApp alert requires at least 60 minutes lead time before due_datetime
     final_sync_whatsapp = data.sync_whatsapp
     try:
-        clean_due_str = str(data.due_datetime).replace("Z", "").replace(" ", "T")
+        clean_due_str = str(formatted_due_ist).replace("Z", "").replace(" ", "T")
         due_dt = datetime.fromisoformat(clean_due_str)
         if due_dt.tzinfo is not None:
-            due_dt = due_dt.astimezone(timezone.utc).replace(tzinfo=None)
-            now_compare = datetime.utcnow()
+            now_compare = datetime.now(IST)
+            mins_remaining = (due_dt - now_compare).total_seconds() / 60.0
         else:
             now_compare = datetime.now()
-        mins_remaining = (due_dt - now_compare).total_seconds() / 60.0
+            mins_remaining = (due_dt - now_compare).total_seconds() / 60.0
         if mins_remaining < 60:
             final_sync_whatsapp = False
     except Exception as err:
@@ -124,7 +172,7 @@ def create_personal_reminder(
         "user_id": clean_uid,
         "title": data.title,
         "notes": data.notes,
-        "due_datetime": data.due_datetime,
+        "due_datetime": formatted_due_ist,
         "reminder_offsets": offsets,
         "sync_calendar": data.sync_calendar,
         "sync_whatsapp": final_sync_whatsapp,
@@ -203,11 +251,13 @@ def update_personal_reminder(
     if not offsets:
         offsets = [30]
 
+    formatted_due_ist = format_due_datetime_ist(data.due_datetime)
+
     final_sync_whatsapp = data.sync_whatsapp
     try:
-        clean_due_str = str(data.due_datetime).replace("Z", "").replace(" ", "T")
+        clean_due_str = str(formatted_due_ist).replace("Z", "").replace(" ", "T")
         due_dt = datetime.fromisoformat(clean_due_str)
-        now_compare = datetime.now()
+        now_compare = datetime.now(IST)
         mins_remaining = (due_dt - now_compare).total_seconds() / 60.0
         if mins_remaining < 60:
             final_sync_whatsapp = False
@@ -247,12 +297,12 @@ def update_personal_reminder(
     if data.sync_calendar:
         try:
             event_title = f"⏰ {data.title}"
-            event_desc = f"Autopay Guard Personal Reminder\nTask: {data.title}\nDue: {data.due_datetime}\nNotes: {data.notes or 'None'}"
+            event_desc = f"Autopay Guard Personal Reminder\nTask: {data.title}\nDue: {formatted_due_ist}\nNotes: {data.notes or 'None'}"
             overrides = [{"method": "popup", "minutes": highest_offset}]
             cal_res = GoogleCalendarService.create_custom_calendar_event(
                 user_id=clean_uid,
                 title=event_title,
-                event_datetime=data.due_datetime,
+                event_datetime=formatted_due_ist,
                 description=event_desc,
                 reminder_overrides=overrides,
                 private_props={"personal_reminder_id": reminder_id}
@@ -265,7 +315,7 @@ def update_personal_reminder(
     updated_fields = {
         "title": data.title,
         "notes": data.notes,
-        "due_datetime": data.due_datetime,
+        "due_datetime": formatted_due_ist,
         "reminder_offsets": offsets,
         "sync_calendar": data.sync_calendar,
         "sync_whatsapp": final_sync_whatsapp,
@@ -313,19 +363,28 @@ def toggle_complete_personal_reminder(
 
     current_completed = True
     cal_event_id = None
+    reminder_data = None
     supabase = get_supabase_client()
     if supabase:
         try:
-            res = supabase.from_("personal_reminders").select("is_completed, calendar_event_id").eq("id", reminder_id).execute()
+            res = supabase.from_("personal_reminders").select("*").eq("id", reminder_id).execute()
             if res.data:
-                current_completed = not bool(res.data[0].get("is_completed"))
-                cal_event_id = res.data[0].get("calendar_event_id")
-            supabase.from_("personal_reminders").update({"is_completed": current_completed}).eq("id", reminder_id).execute()
+                reminder_data = res.data[0]
+                current_completed = not bool(reminder_data.get("is_completed"))
+                cal_event_id = reminder_data.get("calendar_event_id")
+            update_fields = {"is_completed": current_completed}
+            if current_completed:
+                update_fields["completed_at"] = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
+            else:
+                update_fields["completed_at"] = None
+            supabase.from_("personal_reminders").update(update_fields).eq("id", reminder_id).execute()
         except Exception as e:
             print("Supabase toggle completion note:", e)
-    else:
+
+    if not reminder_data:
         for r in _in_memory_reminders:
             if r.get("id") == reminder_id:
+                reminder_data = r
                 current_completed = not bool(r.get("is_completed", False))
                 cal_event_id = r.get("calendar_event_id")
                 break
@@ -333,22 +392,61 @@ def toggle_complete_personal_reminder(
     for r in _in_memory_reminders:
         if r.get("id") == reminder_id:
             r["is_completed"] = current_completed
+            if current_completed:
+                r["completed_at"] = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
+            else:
+                r["completed_at"] = None
             break
 
-    # If task is now COMPLETED, delete the connected event from Google Calendar
+    # 1. If task is now COMPLETED, delete the connected event from Google Calendar
     if current_completed:
         try:
-            if not cal_event_id:
-                for r in _in_memory_reminders:
-                    if r.get("id") == reminder_id:
-                        cal_event_id = r.get("calendar_event_id")
-                        break
-            GoogleCalendarService.delete_event_by_id_or_metadata(
+            if not cal_event_id and reminder_data:
+                cal_event_id = reminder_data.get("calendar_event_id")
+            
+            del_res = GoogleCalendarService.delete_event_by_id_or_metadata(
                 user_id=clean_uid,
                 event_id=cal_event_id,
                 private_props={"personal_reminder_id": reminder_id}
             )
+            print(f"🗑️ Deleted Google Calendar event for completed task '{reminder_id}': {del_res}")
         except Exception as err:
             print("Delete calendar event on task complete note:", err)
+    else:
+        # 2. Task reactivated (marked pending/incompleted)
+        # Re-create Google Calendar event if sync_calendar was enabled
+        if reminder_data and reminder_data.get("sync_calendar", True):
+            try:
+                due_dt_str = reminder_data.get("due_datetime")
+                offsets = reminder_data.get("reminder_offsets") or [30]
+                highest_offset = max(offsets)
+                event_title = f"⏰ {reminder_data.get('title')}"
+                event_desc = f"Autopay Guard Personal Reminder\nTask: {reminder_data.get('title')}\nDue: {due_dt_str}\nNotes: {reminder_data.get('notes') or 'None'}"
+                overrides = [{"method": "popup", "minutes": highest_offset}]
 
-    return {"status": "SUCCESS", "id": reminder_id, "is_completed": current_completed}
+                cal_res = GoogleCalendarService.create_custom_calendar_event(
+                    user_id=clean_uid,
+                    title=event_title,
+                    event_datetime=due_dt_str,
+                    description=event_desc,
+                    reminder_overrides=overrides,
+                    private_props={"personal_reminder_id": reminder_id}
+                )
+                if isinstance(cal_res, dict) and cal_res.get("event_id"):
+                    new_cal_id = cal_res.get("event_id")
+                    if supabase:
+                        supabase.from_("personal_reminders").update({"calendar_event_id": new_cal_id}).eq("id", reminder_id).execute()
+                    for r in _in_memory_reminders:
+                        if r.get("id") == reminder_id:
+                            r["calendar_event_id"] = new_cal_id
+                            break
+                    print(f"📅 Re-synced Google Calendar event '{new_cal_id}' for reactivated task '{reminder_id}'.")
+            except Exception as re_err:
+                print("Re-sync calendar event on reactivate note:", re_err)
+
+    return {
+        "status": "SUCCESS",
+        "id": reminder_id,
+        "is_completed": current_completed,
+        "completed_at": datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30") if current_completed else None
+    }

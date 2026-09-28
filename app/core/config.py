@@ -1,8 +1,10 @@
 import os
-from dotenv import load_dotenv
 
-# Load env variables from root .env
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))
+try:
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))
+except ImportError:
+    pass
 
 class Settings:
     PROJECT_NAME: str = "Autopay Guard"

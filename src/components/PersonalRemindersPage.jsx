@@ -130,9 +130,9 @@ export default function PersonalRemindersPage({ showToast }) {
 
       if (res.ok) {
         const data = await res.json();
-        setReminders(prev => prev.map(r => r.id === id ? { ...r, is_completed: data.is_completed } : r));
+        setReminders(prev => prev.map(r => r.id === id ? { ...r, is_completed: data.is_completed, completed_at: data.completed_at || null } : r));
         if (selectedReminderForModal?.id === id) {
-          setSelectedReminderForModal(prev => ({ ...prev, is_completed: data.is_completed }));
+          setSelectedReminderForModal(prev => ({ ...prev, is_completed: data.is_completed, completed_at: data.completed_at || null }));
         }
         if (showToast) showToast(data.is_completed ? "✅ Task marked as Completed!" : "⏳ Task reactivated as Active!");
       }
@@ -372,12 +372,9 @@ export default function PersonalRemindersPage({ showToast }) {
     }
   };
 
-  // Task is Completed if user manually completed it (r.is_completed) OR target due_datetime has passed
+  // Task is Completed ONLY if user explicitly marked it completed (r.is_completed)
   const isTaskCompleted = (r) => {
-    if (r.is_completed) return true;
-    if (!r.due_datetime) return false;
-    const dueObj = parseLocalDate(r.due_datetime);
-    return (dueObj - new Date()) <= 0;
+    return Boolean(r.is_completed);
   };
 
   const activeCount = reminders.filter(r => !isTaskCompleted(r)).length;
@@ -832,13 +829,30 @@ export default function PersonalRemindersPage({ showToast }) {
                         {isDone ? (
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 border border-emerald-500/60 text-emerald-300 flex items-center space-x-1 shadow-sm">
                             <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            <span>Completed</span>
+                          <span>Completed</span>
                           </span>
-                        ) : (
+                        ) : null}
+
+                        {/* Auto-delete countdown badge for completed tasks */}
+                        {isDone && rem.completed_at ? (() => {
+                          const completedAt = parseLocalDate(rem.completed_at);
+                          const purgeAt = new Date(completedAt.getTime() + 24 * 60 * 60 * 1000);
+                          const hoursLeft = Math.max(0, Math.round((purgeAt - new Date()) / (1000 * 60 * 60)));
+                          const minsLeft = Math.max(0, Math.round((purgeAt - new Date()) / (1000 * 60)));
+                          let purgeLabel = hoursLeft > 1 ? `Auto-deletes in ${hoursLeft}h` : minsLeft > 0 ? `Auto-deletes in ${minsLeft}m` : 'Purging soon';
+                          return (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-950/80 border border-rose-500/40 text-rose-300 flex items-center space-x-1">
+                              <Trash2 className="w-3 h-3 text-rose-400" />
+                              <span>{purgeLabel}</span>
+                            </span>
+                          );
+                        })() : null}
+
+                        {!isDone ? (
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-amber-950 border-amber-500/40 text-amber-300">
                             {countdownLabel}
                           </span>
-                        )}
+                        ) : null}
 
                         {/* 3D Gauge Hint Badge */}
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40 flex items-center space-x-1 opacity-90 group-hover:opacity-100">
