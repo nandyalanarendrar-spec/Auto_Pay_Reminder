@@ -287,7 +287,15 @@ class MockGeneratorService:
         Uses thread lock to prevent concurrent double-initialization (e.g., React 18 StrictMode double-fetch).
         """
         clean_uid = str(user_id).strip('"\'')
-        
+
+        # Unauthenticated requests fall back to the literal placeholder "default_user" in several
+        # routes — that's not a real account and not a valid Postgres uuid, so every insert below
+        # would fail (and spam errors) if we tried to seed mock data for it. Skip entirely.
+        try:
+            uuid.UUID(clean_uid)
+        except (ValueError, AttributeError, TypeError):
+            return False
+
         with _INIT_LOCK:
             if MockGeneratorService.is_mock_data_initialized(clean_uid):
                 return False

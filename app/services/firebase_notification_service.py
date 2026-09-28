@@ -304,8 +304,49 @@ class FirebaseNotificationService:
         """
         Daily background job: checks all subscriptions and EMIs due in the next 7 days,
         categorizes urgency, dispatches FCM push notifications, and logs sent notifications into backend DB.
+
+        Called with no user_id from the scheduler's global sweep — in that case it fans out
+        across every real user instead of running against the literal "default_user" placeholder
+        (which isn't a real account and isn't a valid Postgres uuid, so it could never actually
+        find or notify anyone).
         """
-        clean_uid = str(user_id).strip('"\'') if user_id else "default_user"
+        if user_id is None:
+            all_results = []
+            total_sent = 0
+            for uid in FirebaseNotificationService._get_all_user_ids_with_data():
+                res = FirebaseNotificationService._run_daily_payment_reminder_job_for_user(uid)
+                total_sent += res.get("reminders_count", 0)
+                all_results.append(res)
+            return {
+                "job": "Daily Payment Reminder Push Notification Engine",
+                "executed_at": datetime.utcnow().isoformat(),
+                "users_scanned": len(all_results),
+                "reminders_count": total_sent,
+                "per_user_results": all_results
+            }
+        return FirebaseNotificationService._run_daily_payment_reminder_job_for_user(user_id)
+
+    @staticmethod
+    def _get_all_user_ids_with_data() -> List[str]:
+        """Distinct user_ids across subscriptions and emis, so the global sweep only visits real users."""
+        supabase = get_supabase_client()
+        if not supabase:
+            return []
+        user_ids = set()
+        for table in ("subscriptions", "emis"):
+            try:
+                res = supabase.from_(table).select("user_id").execute()
+                for row in (res.data or []):
+                    uid = row.get("user_id")
+                    if uid:
+                        user_ids.add(str(uid))
+            except Exception as e:
+                print(f"Error listing user_ids from {table}:", e)
+        return list(user_ids)
+
+    @staticmethod
+    def _run_daily_payment_reminder_job_for_user(user_id: str) -> Dict[str, Any]:
+        clean_uid = str(user_id).strip('"\'')
         due_alerts = FirebaseNotificationService.get_due_reminders_for_user(clean_uid)
         notifications_sent = []
         today_iso = date.today().isoformat()

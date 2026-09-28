@@ -117,6 +117,15 @@ class EMIService:
     def get_user_emis(user_id: str) -> List[dict]:
         clean_uid = str(user_id).strip('"\'')
         raw_emis = []
+
+        # Unauthenticated requests fall back to the literal placeholder "default_user" — not a
+        # real account and not a valid Postgres uuid, so every query below would fail. There's no
+        # real user's data to return here, so skip Supabase entirely instead of erroring on it.
+        try:
+            uuid.UUID(clean_uid)
+        except (ValueError, AttributeError, TypeError):
+            return []
+
         supabase = get_supabase_client()
         try:
             res = supabase.from_("emis").select("*").eq("user_id", clean_uid).execute()
