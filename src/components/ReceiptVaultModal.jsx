@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { X, FileText, ExternalLink, ShieldCheck, Upload, CheckCircle2, Lock, Sparkles, Building2, Calendar, CreditCard } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, FileText, ExternalLink, ShieldCheck, Upload, CheckCircle2, Lock, Sparkles, Building2, Calendar, CreditCard, Camera } from 'lucide-react';
+import { isNativeApp, takePhoto } from '../utils/nativeFeatures';
 
 export default function ReceiptVaultModal({ isOpen, onClose, subscription }) {
   const [customUrl, setCustomUrl] = useState('');
   const [activeReceiptUrl, setActiveReceiptUrl] = useState(null);
+  const webFileInputRef = useRef(null);
 
   if (!isOpen || !subscription) return null;
 
@@ -19,6 +21,21 @@ export default function ReceiptVaultModal({ isOpen, onClose, subscription }) {
       setActiveReceiptUrl(customUrl.trim());
       setCustomUrl('');
     }
+  };
+
+  const handleCapturePhoto = async () => {
+    if (isNativeApp()) {
+      const file = await takePhoto();
+      if (file) setActiveReceiptUrl(URL.createObjectURL(file));
+    } else {
+      webFileInputRef.current?.click();
+    }
+  };
+
+  const handleWebFileSelected = (e) => {
+    const file = e.target.files?.[0];
+    if (file) setActiveReceiptUrl(URL.createObjectURL(file));
+    e.target.value = '';
   };
 
   return (
@@ -111,6 +128,24 @@ export default function ReceiptVaultModal({ isOpen, onClose, subscription }) {
             </div>
           </div>
         )}
+
+        {/* Capture Receipt Photo (native camera on app, file picker on web) */}
+        <button
+          type="button"
+          onClick={handleCapturePhoto}
+          className="mt-3 w-full px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center space-x-2 transition-all"
+        >
+          <Camera className="w-4 h-4 text-cyan-400" />
+          <span>{isNativeApp() ? 'Take Photo of Receipt' : 'Upload Receipt Photo'}</span>
+        </button>
+        <input
+          ref={webFileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleWebFileSelected}
+          className="hidden"
+        />
 
         {/* Upload Custom Receipt Form */}
         <form onSubmit={handleSaveCustomReceipt} className="mt-3 flex items-center space-x-2">

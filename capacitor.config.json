@@ -1,0 +1,8 @@
+{
+  "appId": "com.autopayguard.app",
+  "appName": "Autopay Guard",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http"
+  }
+}
