@@ -136,7 +136,7 @@ def run_high_frequency_personal_reminders_sweep():
                                 body=push_body,
                                 data={"type": "personal_reminder", "id": rem_id}
                             )
-                            NotificationLogService.log_notification(user_id, "personal_reminder", rem_id, notif_type, "fcm")
+                            NotificationLogService.log_notification(user_id, "personal_reminder", rem_id, notif_type, channel="fcm")
                             print(f"🔔 [APP PUSH FIRED] Task: '{task_title}' ({push_title})")
 
                 # --- 2. WHATSAPP ALERT: Fixed 1 Hour Before ONLY (60m before) if WhatsApp enabled ---
@@ -160,13 +160,16 @@ def run_high_frequency_personal_reminders_sweep():
                             )
                             wa_result = WhatsAppService.send_whatsapp_message(to_phone=target_phone, text_body=wa_body)
                             if wa_result.get("status") != "error":
-                                NotificationLogService.log_notification(user_id, "personal_reminder", rem_id, notif_type, "whatsapp")
+                                NotificationLogService.log_notification(user_id, "personal_reminder", rem_id, notif_type, channel="whatsapp")
                                 print(f"💬 [WHATSAPP FIRED 1H BEFORE] Task: '{task_title}' -> Sent WhatsApp Alert!")
                             else:
                                 print(f"⚠️ [WHATSAPP SEND FAILED] Task: '{task_title}' -> will retry next sweep: {wa_result.get('error')}")
 
                 # --- 3. AUTO-COMPLETE ELAPSED TASKS & PURGE GOOGLE CALENDAR EVENT ---
-                if diff_seconds < -120 and not rem.get("is_completed"):
+                # 20s past due (not the old 2 minutes) — still one sweep tick of buffer after the
+                # "due now" (0m) push notification's own window so it isn't cut off, but the status
+                # now flips close to the actual due time instead of lagging behind it.
+                if diff_seconds < -20 and not rem.get("is_completed"):
                     rem_id = str(rem.get("id"))
                     cal_ev_id = rem.get("calendar_event_id")
                     try:

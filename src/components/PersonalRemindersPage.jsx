@@ -894,11 +894,24 @@ export default function PersonalRemindersPage({ showToast }) {
 
                       {/* Calendar Sync Status & WhatsApp Status & Notification Offsets Badges */}
                       <div className="flex items-center flex-wrap gap-1.5 pl-7 pt-1">
-                        {/* Calendar Status */}
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold flex items-center space-x-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          <span>Google Cal Synced</span>
-                        </span>
+                        {/* Calendar Status — reflects the real sync_calendar/calendar_event_id state
+                            instead of always claiming "Synced" regardless of what actually happened */}
+                        {rem.sync_calendar === false ? (
+                          <span className="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700 text-slate-400 text-[10px] font-bold flex items-center space-x-1">
+                            <Calendar className="w-3 h-3 text-slate-500" />
+                            <span>Calendar Sync Off</span>
+                          </span>
+                        ) : !rem.calendar_event_id || String(rem.calendar_event_id).startsWith('sim-') ? (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-950/60 border border-amber-500/30 text-amber-300 text-[10px] font-medium flex items-center space-x-1">
+                            <AlertCircle className="w-3 h-3 text-amber-400" />
+                            <span>Google Calendar Not Connected</span>
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold flex items-center space-x-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span>Google Cal Synced</span>
+                          </span>
+                        )}
 
                         {/* WhatsApp Status Badge */}
                         {isWaActive ? (
