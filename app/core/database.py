@@ -5,6 +5,13 @@ from app.core.config import settings
 # Retrieve DATABASE_URL from environment
 DATABASE_URL = settings.DATABASE_URL or os.getenv("DATABASE_URL", "")
 
+# TEMPORARY DIAGNOSTIC — remove once the Render "DATABASE_URL not initialized" mystery is
+# resolved. Prints only length/prefix, never the real value (password included in the URL).
+print(f"[DB DIAGNOSTIC] settings.DATABASE_URL len={len(settings.DATABASE_URL or '')} "
+      f"os.getenv('DATABASE_URL') len={len(os.getenv('DATABASE_URL', ''))} "
+      f"resolved DATABASE_URL len={len(DATABASE_URL)} "
+      f"prefix={DATABASE_URL[:15]!r}")
+
 engine = None
 SessionLocal = None
 Base = None
