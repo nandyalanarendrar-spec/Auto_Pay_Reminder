@@ -532,16 +532,32 @@ export default function PersonalRemindersPage({ showToast }) {
               </select>
             </div>
 
-            {/* Due Date & Time */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Due Date & Time *</label>
-              <input
-                type="datetime-local"
-                value={dueDatetime}
-                onChange={(e) => setDueDatetime(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-500 transition-colors"
-                required
-              />
+            {/* Due Date & Time — separate date/time inputs instead of a single
+                datetime-local field. Combined datetime-local widgets are notoriously
+                unreliable on mobile browsers (the inline segment editor can grab focus
+                without ever bringing up the native keyboard/picker); plain date and
+                time inputs have much more consistent native picker support. */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Due Date *</label>
+                <input
+                  type="date"
+                  value={dueDatetime.split('T')[0] || ''}
+                  onChange={(e) => setDueDatetime(`${e.target.value}T${dueDatetime.split('T')[1] || '10:00'}`)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-base focus:outline-none focus:border-amber-500 transition-colors"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Due Time *</label>
+                <input
+                  type="time"
+                  value={dueDatetime.split('T')[1] || ''}
+                  onChange={(e) => setDueDatetime(`${dueDatetime.split('T')[0] || getTomorrowDefault().split('T')[0]}T${e.target.value}`)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-base focus:outline-none focus:border-amber-500 transition-colors"
+                  required
+                />
+              </div>
             </div>
 
             {/* Notes */}
@@ -651,7 +667,7 @@ export default function PersonalRemindersPage({ showToast }) {
                       type="checkbox"
                       checked={syncCalendar}
                       onChange={(e) => setSyncCalendar(e.target.checked)}
-                      className="rounded bg-slate-950 border-slate-800 text-indigo-500 focus:ring-0"
+                      className="w-4 h-4 rounded bg-slate-950 border-slate-800 accent-indigo-500 focus:ring-0"
                     />
                     <span className="flex items-center space-x-1">
                       <Calendar className="w-3.5 h-3.5 text-indigo-400" />
@@ -665,7 +681,7 @@ export default function PersonalRemindersPage({ showToast }) {
                       disabled={!isWhatsappAvailable}
                       checked={isWhatsappAvailable && syncWhatsapp}
                       onChange={(e) => setSyncWhatsapp(e.target.checked)}
-                      className="rounded bg-slate-950 border-slate-800 text-emerald-500 focus:ring-0"
+                      className="w-4 h-4 rounded bg-slate-950 border-slate-800 accent-emerald-500 focus:ring-0"
                     />
                     <span className="flex items-center space-x-1">
                       <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />

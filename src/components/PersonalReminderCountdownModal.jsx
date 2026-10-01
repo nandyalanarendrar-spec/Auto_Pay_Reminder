@@ -357,15 +357,27 @@ export default function PersonalReminderCountdownModal({
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Due Date & Time *</label>
-                <input
-                  type="datetime-local"
-                  value={editDueDatetime}
-                  onChange={(e) => setEditDueDatetime(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-500"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Due Date *</label>
+                  <input
+                    type="date"
+                    value={editDueDatetime.split('T')[0] || ''}
+                    onChange={(e) => setEditDueDatetime(`${e.target.value}T${editDueDatetime.split('T')[1] || '10:00'}`)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-base focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Due Time *</label>
+                  <input
+                    type="time"
+                    value={editDueDatetime.split('T')[1] || ''}
+                    onChange={(e) => setEditDueDatetime(`${editDueDatetime.split('T')[0] || ''}T${e.target.value}`)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-base focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
               </div>
 
               <div>
