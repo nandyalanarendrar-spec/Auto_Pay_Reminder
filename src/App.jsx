@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import DashboardStats from './components/DashboardStats';
 import SubscriptionList from './components/SubscriptionList';
 import SpendAnalytics from './components/SpendAnalytics';
@@ -654,11 +655,6 @@ export default function App() {
     }
   };
 
-  // Calculate overall average risk score
-  const averageRiskScore = Math.round(
-    subscriptions.reduce((acc, sub) => acc + (sub.risk_score || 10), 0) / (subscriptions.length || 1)
-  );
-
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-[#080F1F] flex flex-col items-center justify-center text-white">
@@ -677,8 +673,28 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#080F1F] text-slate-100">
-      
+    <div className="min-h-screen flex bg-[#080F1F] text-slate-100">
+
+      {/* Secondary Actions Sidebar (Tools, AI Chat, WhatsApp, Notifications, Theme, PWA) —
+          a real flex sibling (not fixed+hardcoded top offset) so it always sits correctly
+          below the navbar regardless of whether the notification permission banner above
+          it is showing, instead of guessing a pixel offset that breaks when banner height changes. */}
+      <Sidebar
+        currentUser={currentUser}
+        onToggleAiChat={() => setIsAiChatOpen(!isAiChatOpen)}
+        onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
+        onEnableNotifications={handleEnableNotifications}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        canInstallPwa={!!deferredInstallPrompt}
+        onInstallPwa={handleInstallPwa}
+        onToggleKillSwitch={handleToggleKillSwitch}
+        killSwitchActive={killSwitchActive}
+        onOpenWhatIf={() => setIsWhatIfOpen(true)}
+      />
+
+      <div className="flex-1 flex flex-col min-w-0">
+
       {/* Soft Notification Permission Request Banner */}
       <NotificationPermissionBanner onPermissionGranted={() => checkAndFireBackendDueReminders()} />
 
@@ -695,21 +711,9 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         onOpenAddModal={() => setIsAddModalOpen(true)}
-        onToggleAiChat={() => setIsAiChatOpen(!isAiChatOpen)}
-        averageRiskScore={averageRiskScore}
-        onOpenWhatIf={() => setIsWhatIfOpen(true)}
-        onToggleKillSwitch={handleToggleKillSwitch}
-        killSwitchActive={killSwitchActive}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
-        onEnableNotifications={handleEnableNotifications}
-        onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
-        onOpenPersonalReminders={() => setActiveTab('reminders')}
         activeTab={activeTab}
         onSelectTab={(tab) => setActiveTab(tab)}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-        canInstallPwa={!!deferredInstallPrompt}
-        onInstallPwa={handleInstallPwa}
       />
 
       {/* Main Content Area */}
@@ -915,6 +919,7 @@ export default function App() {
         <span>Send 'Hi' on WhatsApp</span>
       </button>
 
+      </div>
     </div>
   );
 }

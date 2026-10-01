@@ -194,20 +194,20 @@ class GoogleCalendarService:
             }
             _save_oauth_token_record(user_id, token_entry)
 
-            # AUTOMATIC BACKFILL SYNCHRONIZATION (BACKGROUND THREAD):
-            # Asynchronously backfill all existing subscriptions & EMIs in a background thread so OAuth response returns instantly (<1s)
+            # AUTOMATIC BACKFILL SYNCHRONIZATION:
+            # Runs in-line (not a fire-and-forget background thread) before the OAuth callback
+            # responds. A background daemon thread here used to get silently killed mid-backfill
+            # on free-tier hosts that spin the instance down shortly after the HTTP response is
+            # sent — the thread isn't tied to that response, but the host doesn't know that and
+            # treats "response sent" as "idle". Running it synchronously (same pattern already
+            # used by the working manual "Purge & Resync" endpoint) makes the callback a few
+            # seconds slower but guarantees the backfill actually finishes.
             try:
                 from app.services.calendar_agent_service import CalendarAgentService
-                import threading
-                bg_thread = threading.Thread(
-                    target=CalendarAgentService.resync_user_calendar,
-                    args=(user_id,),
-                    daemon=True
-                )
-                bg_thread.start()
-                print(f"🚀 Started asynchronous background Calendar Backfill Sync for user {user_id}")
+                CalendarAgentService.resync_user_calendar(user_id)
+                print(f"✅ Completed Calendar Backfill Sync for user {user_id}")
             except Exception as sync_err:
-                print("Automatic Calendar Backfill Sync trigger note:", sync_err)
+                print("Automatic Calendar Backfill Sync error:", sync_err)
 
             return {
                 "success": True,
