@@ -3,6 +3,85 @@
  * Enables native OS Desktop Web Notifications via HTML5 Notification API
  */
 
+let _sharedAudioCtx = null;
+const getAudioCtx = () => {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!_sharedAudioCtx || _sharedAudioCtx.state === 'closed') {
+      _sharedAudioCtx = new Ctx();
+    }
+    if (_sharedAudioCtx.state === 'suspended') {
+      _sharedAudioCtx.resume().catch(() => {});
+    }
+    return _sharedAudioCtx;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Synthesized "bubble drop" pop — a quick downward pitch sweep with a soft
+// decay, mimicking a water droplet/bubble sound. No external audio file
+// dependency, so it always loads instantly and never breaks on a dead CDN link.
+export const playBubbleDropSound = () => {
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(900, now);
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.18);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.45, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.24);
+  } catch (e) {}
+};
+
+// Loud, looping alarm-clock tone for "most important" reminders. Returns a
+// stop() function the caller must invoke to silence it.
+export const startAlarmSound = () => {
+  const ctx = getAudioCtx();
+  if (!ctx) return () => {};
+
+  let stopped = false;
+  let timeoutId = null;
+
+  const beepPair = () => {
+    if (stopped) return;
+    const now = ctx.currentTime;
+    [0, 0.3].forEach((offset) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, now + offset);
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.35, now + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.27);
+    });
+    timeoutId = setTimeout(beepPair, 900);
+  };
+
+  beepPair();
+
+  return () => {
+    stopped = true;
+    if (timeoutId) clearTimeout(timeoutId);
+  };
+};
+
 export const requestNotificationPermission = async () => {
   if (!('Notification' in window)) {
     console.warn("This browser does not support desktop web notifications.");
@@ -45,12 +124,8 @@ export const sendWebNotification = async (title, options = {}) => {
 
     console.log("🔔 [Autopay Guard Web Notification Fired]:", title, notifOptions);
 
-    // Play subtle notification chime sound
-    try {
-      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-      audio.volume = 0.5;
-      audio.play().catch(() => {});
-    } catch (aErr) {}
+    // Play bubble-drop notification sound
+    playBubbleDropSound();
 
     // Direct HTML5 Standard Notification API (Instant, Non-blocking)
     try {

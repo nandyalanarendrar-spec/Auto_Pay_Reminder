@@ -22,9 +22,11 @@ import {
   Eye
 } from 'lucide-react';
 import PersonalReminderCountdownModal from './PersonalReminderCountdownModal';
+import AlarmModal from './AlarmModal';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { sendWebNotification, requestNotificationPermission } from '../utils/browserNotifications';
 import { API_BASE_URL } from '../config/api';
+import { AlarmClock } from 'lucide-react';
 
 // Backend values always carry an explicit UTC offset (usually "+05:30" IST). Any
 // string with an explicit offset (Z, +HH:MM, -HH:MM) is parsed natively — the
@@ -88,6 +90,10 @@ export default function PersonalRemindersPage({ showToast }) {
 
   const [syncCalendar, setSyncCalendar] = useState(true);
   const [syncWhatsapp, setSyncWhatsapp] = useState(true);
+  const [isImportant, setIsImportant] = useState(false);
+
+  // Full-screen ringing alarm (optional, per-reminder, only while this tab is open)
+  const [activeAlarmReminder, setActiveAlarmReminder] = useState(null);
 
   const minutesUntilDue = dueDatetime ? (parseLocalDate(dueDatetime) - new Date()) / (1000 * 60) : 9999;
   const isWhatsappAvailable = minutesUntilDue >= 60;
@@ -201,6 +207,12 @@ export default function PersonalRemindersPage({ showToast }) {
 
               sendWebNotification(titleMsg, { body: bodyMsg });
               if (showToast) showToast(`⚡ ${titleMsg}: ${offset === 0 ? 'DUE NOW!' : `Due in ${offset}m`}`);
+
+              // Optional: ring a full-screen alarm for tasks marked "Most Important"
+              // once the task is actually due (offset 0), while this tab is open.
+              if (rem.is_important && (offset === 0 || actualRemainingMins === 0)) {
+                setActiveAlarmReminder(rem);
+              }
             }
           }
         });
@@ -285,7 +297,8 @@ export default function PersonalRemindersPage({ showToast }) {
           due_datetime: dueDatetime,
           reminder_offsets: selectedOffsets,
           sync_calendar: syncCalendar,
-          sync_whatsapp: syncWhatsapp
+          sync_whatsapp: syncWhatsapp,
+          is_important: isImportant
         })
       });
 
@@ -293,11 +306,12 @@ export default function PersonalRemindersPage({ showToast }) {
         const newRecord = await res.json();
         setReminders([newRecord, ...reminders]);
         if (showToast) showToast(`⏰ Personal Reminder set for '${title}' with ${selectedOffsets.length} alert times!`);
-        
+
         setTitle('');
         setNotes('');
         setCategory('General');
         setDueDatetime(getTomorrowDefault());
+        setIsImportant(false);
       } else {
         if (showToast) showToast("❌ Failed to create custom reminder.");
       }
@@ -696,6 +710,19 @@ export default function PersonalRemindersPage({ showToast }) {
                     <span>WhatsApp alert not available (Due time is less than 1 hour away).</span>
                   </div>
                 )}
+
+                <label className={`flex items-center space-x-2 cursor-pointer p-2 rounded-xl border transition-colors ${isImportant ? 'bg-rose-950/40 border-rose-500/50' : 'bg-slate-950 border-slate-800'}`}>
+                  <input
+                    type="checkbox"
+                    checked={isImportant}
+                    onChange={(e) => setIsImportant(e.target.checked)}
+                    className="w-4 h-4 rounded bg-slate-950 border-slate-800 accent-rose-500 focus:ring-0"
+                  />
+                  <span className="flex items-center space-x-1.5 text-slate-300">
+                    <AlarmClock className={`w-3.5 h-3.5 ${isImportant ? 'text-rose-400' : 'text-slate-500'}`} />
+                    <span>Mark as Most Important (ring a loud alarm on this device when due — optional)</span>
+                  </span>
+                </label>
               </div>
 
               <button
@@ -888,6 +915,13 @@ export default function PersonalRemindersPage({ showToast }) {
                           <Eye className="w-3 h-3 text-cyan-400" />
                           <span>3D Gauge</span>
                         </span>
+
+                        {rem.is_important && !isDone && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-500/50 flex items-center space-x-1 animate-pulse">
+                            <AlarmClock className="w-3 h-3 text-rose-400" />
+                            <span>Alarm On</span>
+                          </span>
+                        )}
                       </div>
 
                       {/* Notes / Details */}
@@ -1003,6 +1037,20 @@ export default function PersonalRemindersPage({ showToast }) {
         onToggleComplete={(id, e) => handleToggleComplete(id, e)}
         showToast={showToast}
       />
+
+      {/* Full-screen ringing alarm for "Most Important" tasks (optional, opt-in per reminder) */}
+      {activeAlarmReminder && (
+        <AlarmModal
+          reminder={activeAlarmReminder}
+          onDismiss={() => setActiveAlarmReminder(null)}
+          onSnooze={() => {
+            const snoozedReminder = activeAlarmReminder;
+            setActiveAlarmReminder(null);
+            if (showToast) showToast(`⏰ Snoozed '${snoozedReminder.title}' for 5 minutes.`);
+            setTimeout(() => setActiveAlarmReminder(snoozedReminder), 5 * 60 * 1000);
+          }}
+        />
+      )}
 
     </div>
   );

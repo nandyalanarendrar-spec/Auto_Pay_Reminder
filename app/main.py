@@ -60,12 +60,14 @@ def startup_db_sanity_check():
                             completed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
                             sync_calendar BOOLEAN DEFAULT true,
                             sync_whatsapp BOOLEAN DEFAULT true,
+                            is_important BOOLEAN DEFAULT false,
                             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                         );
                     """))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;"))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_calendar BOOLEAN DEFAULT true;"))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_whatsapp BOOLEAN DEFAULT true;"))
+                    conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS is_important BOOLEAN DEFAULT false;"))
                     conn.commit()
                     print("✅ PASS: Connected to Supabase PostgreSQL (All core tables & personal_reminders verified).")
         else:

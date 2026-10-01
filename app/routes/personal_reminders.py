@@ -49,6 +49,7 @@ class CustomReminderCreate(BaseModel):
     reminder_offsets: List[int] = Field(default=[10, 30, 60, 1440], example=[10, 30, 60, 1440]) # minutes before
     sync_calendar: bool = Field(default=True)
     sync_whatsapp: bool = Field(default=True)
+    is_important: bool = Field(default=False, description="Optional: ring a loud on-screen alarm on this device when due.")
 
 class CustomReminderResponse(BaseModel):
     id: str
@@ -190,6 +191,7 @@ def create_personal_reminder(
         "reminder_offsets": offsets,
         "sync_calendar": data.sync_calendar,
         "sync_whatsapp": final_sync_whatsapp,
+        "is_important": data.is_important,
         "calendar_event_id": calendar_event_id,
         "is_completed": False,
         "created_at": now_iso
@@ -345,6 +347,7 @@ def update_personal_reminder(
         "reminder_offsets": offsets,
         "sync_calendar": data.sync_calendar,
         "sync_whatsapp": final_sync_whatsapp,
+        "is_important": data.is_important,
         "calendar_event_id": calendar_event_id
     }
 

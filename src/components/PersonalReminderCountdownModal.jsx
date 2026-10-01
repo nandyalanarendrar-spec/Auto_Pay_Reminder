@@ -16,7 +16,8 @@ import {
   MessageSquare,
   Power,
   Info,
-  CreditCard
+  CreditCard,
+  AlarmClock
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { parseLocalDate } from './PersonalRemindersPage';
@@ -41,6 +42,7 @@ export default function PersonalReminderCountdownModal({
   const [editOffsets, setEditOffsets] = useState([10, 30, 60]);
   const [editSyncCalendar, setEditSyncCalendar] = useState(true);
   const [editSyncWhatsapp, setEditSyncWhatsapp] = useState(true);
+  const [editIsImportant, setEditIsImportant] = useState(false);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export default function PersonalReminderCountdownModal({
     setEditOffsets(reminder.reminder_offsets || [10, 30, 60]);
     setEditSyncCalendar(reminder.sync_calendar !== false);
     setEditSyncWhatsapp(reminder.sync_whatsapp !== false);
+    setEditIsImportant(reminder.is_important === true);
 
     const calculateTimeLeft = () => {
       const target = parseLocalDate(reminder.due_datetime);
@@ -257,7 +260,8 @@ export default function PersonalReminderCountdownModal({
           due_datetime: formattedDue,
           reminder_offsets: editOffsets,
           sync_calendar: editSyncCalendar,
-          sync_whatsapp: editSyncWhatsapp
+          sync_whatsapp: editSyncWhatsapp,
+          is_important: editIsImportant
         })
       });
 
@@ -425,6 +429,19 @@ export default function PersonalReminderCountdownModal({
                         </span>
                       </label>
                     </div>
+
+                    <label className={`flex items-center space-x-2 cursor-pointer p-2 rounded-xl border transition-colors ${editIsImportant ? 'bg-rose-950/40 border-rose-500/50' : 'bg-slate-950 border-slate-800'}`}>
+                      <input
+                        type="checkbox"
+                        checked={editIsImportant}
+                        onChange={(e) => setEditIsImportant(e.target.checked)}
+                        className="rounded bg-slate-950 border-slate-800 text-rose-500 focus:ring-0"
+                      />
+                      <span className="flex items-center space-x-1.5 text-slate-200 text-xs">
+                        <AlarmClock className={`w-3.5 h-3.5 ${editIsImportant ? 'text-rose-400' : 'text-slate-500'}`} />
+                        <span>Mark as Most Important (ring a loud alarm on this device when due — optional)</span>
+                      </span>
+                    </label>
                   </div>
                 );
               })()}
