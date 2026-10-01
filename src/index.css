@@ -161,6 +161,20 @@
   box-shadow: 0 0 30px rgba(255, 0, 127, 0.6);
 }
 
+/* Native date/time picker icons: invert to white for visibility on dark inputs */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.6);
+  cursor: pointer;
+}
+
+.light-theme input[type="date"]::-webkit-calendar-picker-indicator,
+.light-theme input[type="time"]::-webkit-calendar-picker-indicator,
+.light-theme input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: none;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
