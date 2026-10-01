@@ -5,12 +5,14 @@ from app.core.config import settings
 # Retrieve DATABASE_URL from environment
 DATABASE_URL = settings.DATABASE_URL or os.getenv("DATABASE_URL", "")
 
-# TEMPORARY DIAGNOSTIC — remove once the Render "DATABASE_URL not initialized" mystery is
-# resolved. Prints only length/prefix, never the real value (password included in the URL).
-print(f"[DB DIAGNOSTIC] settings.DATABASE_URL len={len(settings.DATABASE_URL or '')} "
-      f"os.getenv('DATABASE_URL') len={len(os.getenv('DATABASE_URL', ''))} "
-      f"resolved DATABASE_URL len={len(DATABASE_URL)} "
-      f"prefix={DATABASE_URL[:15]!r}")
+# A bare "postgresql://" scheme leaves SQLAlchemy to pick a default driver, and that default
+# has changed across SQLAlchemy versions — some newer releases prefer psycopg (v3) over
+# psycopg2, so a plain URL that worked with one SQLAlchemy version can suddenly fail with
+# "No module named 'psycopg'" after a routine `pip install` picks up a newer SQLAlchemy,
+# even though psycopg2-binary (what's actually in requirements.txt) is installed fine.
+# Pinning the driver explicitly makes this independent of whatever SQLAlchemy version lands.
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 engine = None
 SessionLocal = None
@@ -32,9 +34,9 @@ try:
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 except ImportError as imp_err:
-    print(f"[DB DIAGNOSTIC] SQLAlchemy ImportError: {imp_err!r}")
+    print(f"⚠️ [Database] SQLAlchemy or its driver is not installed: {imp_err!r}")
 except Exception as other_err:
-    print(f"[DB DIAGNOSTIC] create_engine() failed (not an ImportError): {other_err!r}")
+    print(f"⚠️ [Database] Failed to create engine: {other_err!r}")
 
 # FastAPI Dependency for Database Session
 def get_db():
