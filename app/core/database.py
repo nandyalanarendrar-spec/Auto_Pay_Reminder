@@ -19,7 +19,7 @@ Base = None
 try:
     from sqlalchemy import create_engine, text
     from sqlalchemy.orm import sessionmaker, declarative_base
-    
+
     Base = declarative_base()
 
     if DATABASE_URL and not DATABASE_URL.startswith("your_"):
@@ -31,8 +31,10 @@ try:
         )
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-except ImportError:
-    print("SQLAlchemy is being installed...")
+except ImportError as imp_err:
+    print(f"[DB DIAGNOSTIC] SQLAlchemy ImportError: {imp_err!r}")
+except Exception as other_err:
+    print(f"[DB DIAGNOSTIC] create_engine() failed (not an ImportError): {other_err!r}")
 
 # FastAPI Dependency for Database Session
 def get_db():
