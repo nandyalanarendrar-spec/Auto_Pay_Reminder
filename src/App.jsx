@@ -126,21 +126,22 @@ export default function App() {
         window.history.replaceState(null, '', window.location.pathname);
       }
 
+      // Local development only: when there is no login session, use a demo user so the UI can be
+      // previewed. In production, no session always means "show the login page" - never someone's account.
+      const demoUser = import.meta.env.DEV
+        ? { id: 'demo-user-1', email: 'demo@example.com', user_metadata: { name: 'Demo' } }
+        : null;
+
       if (isSupabaseConfigured && supabase) {
         try {
           const { data } = await supabase.auth.getSession();
-          if (data?.session?.user) {
-            setCurrentUser(data.session.user);
-          } else {
-            setCurrentUser({ id: 'demo-user-1', email: 'nandyalanarendrar@gmail.com', user_metadata: { name: 'Narendra' } });
-          }
+          setCurrentUser(data?.session?.user || demoUser);
         } catch (err) {
           console.warn("Supabase Auth check error:", err);
-          setCurrentUser({ id: 'demo-user-1', email: 'nandyalanarendrar@gmail.com', user_metadata: { name: 'Narendra' } });
+          setCurrentUser(demoUser);
         }
       } else {
-        // Fallback for mock/demo mode
-        setCurrentUser({ id: 'demo-user-1', email: 'nandyalanarendrar@gmail.com', user_metadata: { name: 'Narendra' } });
+        setCurrentUser(demoUser);
       }
       setIsAuthLoading(false);
     }
@@ -153,6 +154,8 @@ export default function App() {
           if (!pendingPasswordReset) {
             setCurrentUser(session.user);
           }
+        } else if (event === 'SIGNED_OUT') {
+          setCurrentUser(null);
         }
       });
 

@@ -98,7 +98,7 @@ export default function RegisterView({ onRegisterSuccess, onNavigateLogin, onSoc
           name="fullName"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          placeholder="Nandyala Narendra Redy"
+          placeholder="Your full name"
           error={errors.fullName}
           required
         />
@@ -110,7 +110,7 @@ export default function RegisterView({ onRegisterSuccess, onNavigateLogin, onSoc
           name="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="nandyalanarendrar@gmail.com"
+          placeholder="you@example.com"
           error={errors.email}
           required
         />

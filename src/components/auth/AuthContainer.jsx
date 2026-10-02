@@ -34,9 +34,10 @@ export default function AuthContainer({ onAuthenticated, onPasswordResetStarted,
         onAuthenticated(data.user);
       }
     } else {
-      // Demo Mock mode fallback
+      // Demo mock mode is for local development only
+      if (!import.meta.env.DEV) throw new Error('Sign-in service is not configured. Please try again later.');
       if (onAuthenticated) {
-        onAuthenticated({ id: 'demo-user-1', email, user_metadata: { name: 'Narendra' } });
+        onAuthenticated({ id: 'demo-user-1', email, user_metadata: { name: 'Demo' } });
       }
     }
   };
@@ -122,6 +123,7 @@ export default function AuthContainer({ onAuthenticated, onPasswordResetStarted,
         onAuthenticated(data.user);
       }
     } else {
+      if (!import.meta.env.DEV) throw new Error('Sign-in service is not configured. Please try again later.');
       if (onAuthenticated) {
         onAuthenticated({ id: 'demo-user-1', email, user_metadata: { name: 'Verified User' } });
       }
@@ -169,13 +171,17 @@ export default function AuthContainer({ onAuthenticated, onPasswordResetStarted,
         alert(`Google Login Note: ${err.message}\n\nMake sure Google Provider is enabled in your Supabase Dashboard (Authentication -> Providers -> Google).`);
       }
     } else {
-      // Demo Mock Mode: Instant Google Login simulation
+      // Demo Mock Mode (local development only)
+      if (!import.meta.env.DEV) {
+        alert('Google sign-in is not configured. Please try again later.');
+        return;
+      }
       if (onAuthenticated) {
         onAuthenticated({
           id: 'google-demo-user-123',
-          email: 'nandyalanarendrar@gmail.com',
+          email: 'demo@example.com',
           user_metadata: {
-            full_name: 'Narendra (Google)',
+            full_name: 'Demo (Google)',
             avatar_url: 'https://lh3.googleusercontent.com/a/default-user'
           }
         });

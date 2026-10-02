@@ -66,41 +66,12 @@ def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depen
 
 def get_optional_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> dict:
     """
-    FastAPI dependency that extracts Supabase JWT token if present.
-    If no token is provided (e.g. Swagger UI testing), falls back to the active user session.
+    Kept for the routes that already depend on it, but it is now strict: a valid Supabase
+    token is required. It previously fell back to the most recently connected account (and
+    finally a hardcoded owner id) for requests without a token, which let anyone read or
+    change another person's data.
     """
-    if credentials and credentials.credentials:
-        token = credentials.credentials
-        try:
-            supabase = get_supabase_client()
-            user_response = supabase.auth.get_user(token)
-            if user_response and user_response.user:
-                user = user_response.user
-                return {
-                    "id": user.id,
-                    "email": user.email,
-                    "metadata": user.user_metadata
-                }
-        except Exception as e:
-            print("Supabase Auth token verify error in optional auth:", e)
-
-    # Fallback to active OAuth user record in database
-    try:
-        supabase = get_supabase_client()
-        res = supabase.from_("oauth_tokens").select("user_id, google_email").order("updated_at", desc=True).limit(1).execute()
-        if res.data and len(res.data) > 0:
-            return {
-                "id": res.data[0].get("user_id"),
-                "email": res.data[0].get("google_email")
-            }
-    except Exception as e:
-        print("Fallback user lookup note:", e)
-
-    return {
-        "id": "b214d765-ddd1-4dab-b44a-0162fca19579",
-        "email": "nandyalanarendrar@gmail.com"
-    }
-
+    return get_current_user(credentials)
 
 
 ADMIN_EMAILS = ["nandyalanarendrar@gmail.com", "nnrreddy.123456789@gmail.com", "admin@autopayguard.com"]

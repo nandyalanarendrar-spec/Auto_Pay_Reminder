@@ -12,6 +12,7 @@ import {
   Download
 } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
+import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 
 // Literal class strings per tool so Tailwind can generate them.
 const T = {
@@ -63,12 +64,17 @@ export default function ToolsRow({
 
   const handleExport = async (format) => {
     setIsToolsOpen(false);
-    const uid = currentUser?.id || 'default_user';
-    const reportUrl = `${API_BASE_URL}/reports/export?format=${format}&user_id=${uid}`;
     try {
-      const response = await fetch(reportUrl);
+      let token = null;
+      if (isSupabaseConfigured && supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        token = session?.access_token || null;
+      }
+      const response = await fetch(`${API_BASE_URL}/reports/export?format=${format}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       if (!response.ok) {
-        window.open(reportUrl, '_blank');
+        alert('Could not download the report. Please sign in again and retry.');
         return;
       }
       const blob = await response.blob();
@@ -81,7 +87,7 @@ export default function ToolsRow({
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      window.open(reportUrl, '_blank');
+      alert('Could not download the report. Please check your connection and retry.');
     }
   };
 

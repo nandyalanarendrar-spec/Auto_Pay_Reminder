@@ -68,7 +68,7 @@ export default function LoginView({
           name="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="narendra"
+          placeholder="your username or email"
           required
         />
 
