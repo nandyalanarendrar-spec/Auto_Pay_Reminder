@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './components/Navbar';
-import Sidebar from './components/Sidebar';
+import ToolsRow from './components/ToolsRow';
 import DashboardStats from './components/DashboardStats';
 import HomeNavTiles from './components/HomeNavTiles';
 import MonthlySummaryCard from './components/MonthlySummaryCard';
@@ -741,23 +741,6 @@ export default function App() {
   return (
     <div className="min-h-screen flex bg-[#080F1F] text-slate-100">
 
-      {/* Secondary Actions Sidebar (Tools, AI Chat, WhatsApp, Notifications, Theme, PWA) —
-          a real flex sibling (not fixed+hardcoded top offset) so it always sits correctly
-          below the navbar regardless of whether the notification permission banner above
-          it is showing, instead of guessing a pixel offset that breaks when banner height changes. */}
-      <Sidebar
-        currentUser={currentUser}
-        onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
-        onEnableNotifications={handleEnableNotifications}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-        canInstallPwa={!!deferredInstallPrompt}
-        onInstallPwa={handleInstallPwa}
-        onToggleKillSwitch={handleToggleKillSwitch}
-        killSwitchActive={killSwitchActive}
-        onOpenWhatIf={() => setIsWhatIfOpen(true)}
-      />
-
       <div className="flex-1 flex flex-col min-w-0">
 
       {/* Soft Notification Permission Request Banner */}
@@ -775,6 +758,20 @@ export default function App() {
 
       {/* Navigation Header */}
       <Navbar currentUser={currentUser} />
+
+      {/* Tools row: tools, WhatsApp, alerts, theme, install */}
+      <ToolsRow
+        currentUser={currentUser}
+        onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
+        onEnableNotifications={handleEnableNotifications}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        canInstallPwa={!!deferredInstallPrompt}
+        onInstallPwa={handleInstallPwa}
+        onToggleKillSwitch={handleToggleKillSwitch}
+        killSwitchActive={killSwitchActive}
+        onOpenWhatIf={() => setIsWhatIfOpen(true)}
+      />
 
       {/* Main Content Area (extra bottom padding for the fixed bottom nav) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36">
@@ -884,7 +881,7 @@ export default function App() {
             onBack={() => setActiveTab('dashboard')}
           />
         ) : (
-          <div className="w-full space-y-6">
+          <div className="w-full lg:max-w-4xl lg:mx-auto space-y-6">
             <DashboardStats
               subscriptions={subscriptions}
               onToggleAiChat={() => setIsAiChatOpen(true)}
@@ -989,7 +986,7 @@ export default function App() {
       {/* Floating Bottom-Right WhatsApp Quick Activation Pill */}
       <button
         onClick={() => setIsWhatsAppModalOpen(true)}
-        className="hidden lg:flex fixed bottom-24 left-28 z-40 px-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/40 items-center space-x-2 transition-all hover:scale-105 cursor-pointer animate-pulse"
+        className="hidden lg:flex fixed bottom-24 left-6 z-40 px-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/40 items-center space-x-2 transition-all hover:scale-105 cursor-pointer animate-pulse"
         title="Activate WhatsApp Alerts (Meta 24h Rule)"
       >
         <span className="text-base">💬</span>
