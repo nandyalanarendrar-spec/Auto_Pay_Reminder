@@ -8,7 +8,8 @@ import TrialAlertBanner from './components/TrialAlertBanner';
 import SubscriptionsPage from './components/SubscriptionsPage';
 import EmisPage from './components/EmisPage';
 import CalendarPage from './components/CalendarPage';
-import MobileNav from './components/MobileNav';
+import BottomNav from './components/BottomNav';
+import ChatFab from './components/ChatFab';
 import AddSubscriptionModal from './components/AddSubscriptionModal';
 import ReceiptVaultModal from './components/ReceiptVaultModal';
 import AIChatDrawer from './components/AIChatDrawer';
@@ -745,7 +746,6 @@ export default function App() {
           it is showing, instead of guessing a pixel offset that breaks when banner height changes. */}
       <Sidebar
         currentUser={currentUser}
-        onToggleAiChat={() => setIsAiChatOpen(!isAiChatOpen)}
         onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
         onEnableNotifications={handleEnableNotifications}
         theme={theme}
@@ -764,23 +764,19 @@ export default function App() {
 
       {/* Toast Banner */}
       {toastMessage && (
-        <div className="fixed bottom-20 md:bottom-6 right-6 z-50 glass-panel border border-[#ff007f]/40 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-2 animate-bounce text-xs font-semibold bg-slate-900/90">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
+        <div className="fixed bottom-24 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
+          <div className="glass-panel border border-[#ff007f]/40 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-2 animate-bounce text-xs font-semibold bg-slate-900/90 pointer-events-auto">
+            <Check className="w-4 h-4 text-emerald-400" />
+            <span>{toastMessage}</span>
+          </div>
         </div>
       )}
 
       {/* Navigation Header */}
-      <Navbar
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        onOpenProfileModal={() => setIsProfileModalOpen(true)}
-        activeTab={activeTab}
-        onSelectTab={(tab) => setActiveTab(tab)}
-      />
+      <Navbar />
 
-      {/* Main Content Area (extra bottom padding on mobile for the fixed bottom nav) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 md:pb-8">
+      {/* Main Content Area (extra bottom padding for the fixed bottom nav) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
         
         {/* Emergency Kill-Switch Active Warning Banner */}
         {killSwitchActive && (
@@ -990,14 +986,21 @@ export default function App() {
       {/* Floating Bottom-Right WhatsApp Quick Activation Pill */}
       <button
         onClick={() => setIsWhatsAppModalOpen(true)}
-        className="fixed bottom-20 md:bottom-6 left-6 z-40 px-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/40 flex items-center space-x-2 transition-all hover:scale-105 cursor-pointer animate-pulse"
+        className="hidden lg:flex fixed bottom-24 left-28 z-40 px-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/40 items-center space-x-2 transition-all hover:scale-105 cursor-pointer animate-pulse"
         title="Activate WhatsApp Alerts (Meta 24h Rule)"
       >
         <span className="text-base">💬</span>
         <span>Send 'Hi' on WhatsApp</span>
       </button>
 
-      <MobileNav activeTab={activeTab} onSelectTab={(tab) => setActiveTab(tab)} />
+      <BottomNav
+        activeTab={activeTab}
+        onSelectTab={(tab) => setActiveTab(tab)}
+        currentUser={currentUser}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+      />
+
+      {!isAiChatOpen && <ChatFab onClick={() => setIsAiChatOpen(true)} />}
 
       </div>
     </div>

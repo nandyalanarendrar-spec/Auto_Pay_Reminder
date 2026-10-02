@@ -73,13 +73,13 @@ export const NotificationPermissionBanner = ({ onPermissionGranted }) => {
     <>
       {/* Top Notification Permission Banner */}
       {showBanner && (
-        <div className={`border-b px-4 py-3 text-sm flex items-center justify-between shadow-lg relative z-40 backdrop-blur-md transition-all ${
+        <div className={`border-b px-4 py-3 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 shadow-lg relative z-40 backdrop-blur-md transition-all ${
           permissionState === 'denied' 
             ? 'bg-gradient-to-r from-red-500/15 via-red-500/25 to-red-500/15 border-red-500/40 text-red-200' 
             : 'bg-gradient-to-r from-amber-500/10 via-amber-500/20 to-amber-500/10 border-amber-500/30 text-amber-200'
         }`}>
-          <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-full ${permissionState === 'denied' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className={`p-2 rounded-full flex-shrink-0 ${permissionState === 'denied' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
               {permissionState === 'denied' ? (
                 <ShieldAlert className="w-5 h-5 animate-pulse" />
               ) : (
@@ -95,7 +95,7 @@ export const NotificationPermissionBanner = ({ onPermissionGranted }) => {
                 : 'Get automatic desktop alerts when subscriptions or EMIs are due in 7, 3, or 1 day(s).'}
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center justify-between sm:justify-start space-x-3 pl-12 sm:pl-0">
             <button
               onClick={handleEnable}
               className={`px-4 py-1.5 font-bold text-xs rounded-lg transition-all shadow-md flex items-center space-x-1.5 ${

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Wrench,
-  Sparkles,
   MessageSquare,
   Bell,
   Sun,
@@ -17,7 +16,6 @@ import { API_BASE_URL } from '../config/api';
 
 export default function Sidebar({
   currentUser,
-  onToggleAiChat,
   onOpenWhatsAppModal,
   onEnableNotifications,
   theme = 'dark',
@@ -65,10 +63,10 @@ export default function Sidebar({
     }
   };
 
-  const iconBtnClass = "p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/60 text-slate-300 hover:text-white transition-all cursor-pointer relative group";
+  const iconBtnClass = "p-3 sm:p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-indigo-500/60 text-slate-300 hover:text-white transition-all cursor-pointer relative group";
 
   return (
-    <aside className="hidden sm:flex sticky top-0 self-start h-screen w-16 flex-shrink-0 flex-col items-center py-4 gap-2 bg-slate-950/95 border-r border-slate-800/80 backdrop-blur-xl z-20">
+    <aside className="flex sticky top-0 self-start h-screen w-16 sm:w-20 flex-shrink-0 flex-col items-center py-4 gap-3 sm:gap-4 bg-slate-950/95 border-r border-slate-800/80 backdrop-blur-xl z-20">
 
       {/* Tools & Reports (flyout) */}
       <div className="relative" ref={toolsRef}>
@@ -77,7 +75,7 @@ export default function Sidebar({
           className={iconBtnClass}
           title="Tools & Reports"
         >
-          <Wrench className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+          <Wrench className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-400 group-hover:scale-110 transition-transform" />
         </button>
 
         {isToolsOpen && (
@@ -125,23 +123,18 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* AI Chat */}
-      <button onClick={onToggleAiChat} className={iconBtnClass} title="AI Chat">
-        <Sparkles className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
-      </button>
-
       <div className="w-8 border-t border-slate-800 my-1" />
 
       {/* WhatsApp Alert */}
       <button onClick={onOpenWhatsAppModal} className={iconBtnClass} title="Activate WhatsApp Alerts">
-        <MessageSquare className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+        <MessageSquare className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400 group-hover:scale-110 transition-transform" />
         <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
         <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full" />
       </button>
 
       {/* Notifications Bell */}
       <button onClick={onEnableNotifications} className={iconBtnClass} title="Enable Web Notifications">
-        <Bell className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+        <Bell className="w-6 h-6 sm:w-7 sm:h-7 text-amber-400 group-hover:scale-110 transition-transform" />
         <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full animate-ping" />
         <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full" />
       </button>
@@ -151,23 +144,23 @@ export default function Sidebar({
       {/* Theme Toggle */}
       <button onClick={onToggleTheme} className={iconBtnClass} title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}>
         {theme === 'dark' ? (
-          <Sun className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform" />
+          <Sun className="w-6 h-6 sm:w-7 sm:h-7 text-amber-400 group-hover:rotate-45 transition-transform" />
         ) : (
-          <Moon className="w-4 h-4 text-indigo-500 group-hover:-rotate-12 transition-transform" />
+          <Moon className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-500 group-hover:-rotate-12 transition-transform" />
         )}
       </button>
 
       {/* PWA Install */}
       <button
         onClick={onInstallPwa}
-        className={`p-2.5 rounded-xl border transition-all cursor-pointer relative group ${
+        className={`p-3 sm:p-3.5 rounded-2xl border transition-all cursor-pointer relative group ${
           canInstallPwa
             ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-md animate-pulse'
             : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
         }`}
         title="Install Mobile/Desktop App"
       >
-        <Smartphone className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+        <Smartphone className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400 group-hover:scale-110 transition-transform" />
       </button>
 
     </aside>
