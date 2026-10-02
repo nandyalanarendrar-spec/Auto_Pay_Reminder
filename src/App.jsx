@@ -757,21 +757,20 @@ export default function App() {
       )}
 
       {/* Navigation Header */}
-      <Navbar currentUser={currentUser} />
-
-      {/* Tools row: tools, WhatsApp, alerts, theme, install */}
-      <ToolsRow
-        currentUser={currentUser}
-        onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
-        onEnableNotifications={handleEnableNotifications}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-        canInstallPwa={!!deferredInstallPrompt}
-        onInstallPwa={handleInstallPwa}
-        onToggleKillSwitch={handleToggleKillSwitch}
-        killSwitchActive={killSwitchActive}
-        onOpenWhatIf={() => setIsWhatIfOpen(true)}
-      />
+      <Navbar currentUser={currentUser} killSwitchActive={killSwitchActive}>
+        <ToolsRow
+          currentUser={currentUser}
+          onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
+          onEnableNotifications={handleEnableNotifications}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          canInstallPwa={!!deferredInstallPrompt}
+          onInstallPwa={handleInstallPwa}
+          onToggleKillSwitch={handleToggleKillSwitch}
+          killSwitchActive={killSwitchActive}
+          onOpenWhatIf={() => setIsWhatIfOpen(true)}
+        />
+      </Navbar>
 
       {/* Main Content Area (extra bottom padding for the fixed bottom nav) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36">

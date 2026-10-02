@@ -13,6 +13,29 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../config/api';
 
+// Literal class strings per tool so Tailwind can generate them.
+const T = {
+  tools: { ring: 'from-indigo-400 to-blue-500', glow: 'shadow-indigo-500/40', icon: 'text-[#a5b4fc]' },
+  whatsapp: { ring: 'from-emerald-400 to-teal-500', glow: 'shadow-emerald-500/40', icon: 'text-[#6ee7b7]' },
+  alerts: { ring: 'from-amber-400 to-orange-500', glow: 'shadow-amber-500/40', icon: 'text-[#fcd34d]' },
+  theme: { ring: 'from-yellow-300 via-orange-400 to-pink-500', glow: 'shadow-orange-500/40', icon: 'text-[#fde68a]' },
+  install: { ring: 'from-cyan-400 to-emerald-400', glow: 'shadow-cyan-500/40', icon: 'text-[#67e8f9]' }
+};
+
+const Tile = ({ tone, pulse, children }) => (
+  <span className={`relative block w-14 h-14 rounded-2xl bg-gradient-to-br ${T[tone].ring} p-[1.5px] shadow-lg ${T[tone].glow} group-hover:-translate-y-1 transition-transform duration-300`}>
+    <span className="flex w-full h-full items-center justify-center rounded-[0.9rem] bg-[#0a0d24]/90 backdrop-blur">
+      {children}
+    </span>
+    {pulse && (
+      <span className="absolute -top-1 -right-1 flex w-3 h-3">
+        <span className={`absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping ${pulse}`} />
+        <span className={`relative inline-flex w-3 h-3 rounded-full border-2 border-[#0a0d24] ${pulse}`} />
+      </span>
+    )}
+  </span>
+);
+
 export default function ToolsRow({
   currentUser,
   onOpenWhatsAppModal,
@@ -62,21 +85,20 @@ export default function ToolsRow({
     }
   };
 
-  const cellClass = 'flex flex-col items-center justify-center gap-1 py-2 cursor-pointer group';
-  const iconWrap = 'relative p-3 rounded-2xl bg-slate-900 border border-slate-800 group-hover:border-indigo-500/60 transition-all';
-  const iconSize = 'w-7 h-7 group-hover:scale-110 transition-transform';
-  const labelClass = 'text-[0.625rem] font-semibold text-slate-400 group-hover:text-white';
+  const cellClass = 'group flex flex-col items-center justify-center gap-1.5 py-1 cursor-pointer active:scale-95 transition-transform';
+  const labelClass = 'text-[0.65rem] font-bold tracking-wide text-[#c7d2fe] group-hover:text-[#ffffff] transition-colors';
+  const iconSize = 'w-7 h-7 transition-transform duration-300 group-hover:scale-110';
 
   return (
-    <div className="sticky top-20 z-20 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800/80">
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 grid grid-cols-5">
+    <div className="rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_10px_30px_rgba(0,0,0,0.35)] px-2 py-3">
+      <div className="grid grid-cols-5">
 
         {/* Tools & Reports (dropdown) */}
         <div className="relative flex justify-center" ref={toolsRef}>
           <button onClick={() => setIsToolsOpen(!isToolsOpen)} className={cellClass} title="Tools & Reports">
-            <span className={iconWrap}>
-              <Wrench className={`${iconSize} text-indigo-400`} />
-            </span>
+            <Tile tone="tools">
+              <Wrench className={`${iconSize} ${T.tools.icon}`} />
+            </Tile>
             <span className={labelClass}>Tools</span>
           </button>
 
@@ -127,41 +149,37 @@ export default function ToolsRow({
 
         {/* WhatsApp Alert */}
         <button onClick={onOpenWhatsAppModal} className={cellClass} title="Activate WhatsApp Alerts">
-          <span className={iconWrap}>
-            <MessageSquare className={`${iconSize} text-emerald-400`} />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full" />
-          </span>
+          <Tile tone="whatsapp" pulse="bg-emerald-400">
+            <MessageSquare className={`${iconSize} ${T.whatsapp.icon}`} />
+          </Tile>
           <span className={labelClass}>WhatsApp</span>
         </button>
 
         {/* Notifications */}
         <button onClick={onEnableNotifications} className={cellClass} title="Enable Web Notifications">
-          <span className={iconWrap}>
-            <Bell className={`${iconSize} text-amber-400`} />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full" />
-          </span>
+          <Tile tone="alerts" pulse="bg-amber-400">
+            <Bell className={`${iconSize} ${T.alerts.icon}`} />
+          </Tile>
           <span className={labelClass}>Alerts</span>
         </button>
 
         {/* Theme Toggle */}
         <button onClick={onToggleTheme} className={cellClass} title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}>
-          <span className={iconWrap}>
+          <Tile tone="theme">
             {theme === 'dark' ? (
-              <Sun className={`${iconSize} text-amber-400`} />
+              <Sun className={`${iconSize} ${T.theme.icon} group-hover:rotate-45`} />
             ) : (
-              <Moon className={`${iconSize} text-indigo-500`} />
+              <Moon className={`${iconSize} text-[#a5b4fc] group-hover:-rotate-12`} />
             )}
-          </span>
-          <span className={labelClass}>Theme</span>
+          </Tile>
+          <span className={labelClass}>{theme === 'dark' ? 'Light' : 'Dark'}</span>
         </button>
 
         {/* PWA Install */}
         <button onClick={onInstallPwa} className={cellClass} title="Install Mobile/Desktop App">
-          <span className={`${iconWrap} ${canInstallPwa ? '!bg-emerald-950/80 !border-emerald-500 animate-pulse' : ''}`}>
-            <Smartphone className={`${iconSize} text-emerald-400`} />
-          </span>
+          <Tile tone="install" pulse={canInstallPwa ? 'bg-emerald-400' : null}>
+            <Smartphone className={`${iconSize} ${T.install.icon}`} />
+          </Tile>
           <span className={labelClass}>Install</span>
         </button>
       </div>
