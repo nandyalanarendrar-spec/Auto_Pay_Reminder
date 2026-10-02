@@ -1,16 +1,14 @@
 import React from 'react';
 import {
   ShieldCheck,
-  PlusCircle,
   LogOut,
-  User,
-  Clock
+  User
 } from 'lucide-react';
+import { NAV_TABS } from '../constants/navTabs';
 
 export default function Navbar({
   currentUser,
   onLogout,
-  onOpenAddModal,
   onOpenProfileModal,
   activeTab = 'dashboard',
   onSelectTab
@@ -31,7 +29,7 @@ export default function Navbar({
               <h1 className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-indigo-200 tracking-tight">
                 Autopay Guard
               </h1>
-              <span className="px-2 py-0.5 text-[9px] font-bold tracking-wider text-indigo-300 bg-indigo-950/80 border border-indigo-500/30 rounded-full uppercase">
+              <span className="hidden sm:inline px-2 py-0.5 text-[9px] font-bold tracking-wider text-indigo-300 bg-indigo-950/80 border border-indigo-500/30 rounded-full uppercase">
                 PRO V1.0
               </span>
             </div>
@@ -41,42 +39,25 @@ export default function Navbar({
 
         {/* PAGE NAVIGATION TABS */}
         <div className="hidden md:flex items-center space-x-1 bg-slate-900/90 p-1 rounded-2xl border border-slate-800">
-          <button
-            onClick={() => onSelectTab && onSelectTab('dashboard')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'dashboard'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Dashboard
-          </button>
-
-          <button
-            onClick={() => onSelectTab && onSelectTab('reminders')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'reminders'
-                ? 'bg-gradient-to-r from-amber-500 to-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span>Reminders Hub</span>
-          </button>
+          {NAV_TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => onSelectTab && onSelectTab(id)}
+              title={label}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === id
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">{label}</span>
+            </button>
+          ))}
         </div>
 
-        {/* GROUP 2: Primary Action + Profile */}
+        {/* GROUP 2: Profile */}
         <div className="flex items-center space-x-2 sm:space-x-3">
-
-          {/* Add Subscription Button */}
-          <button
-            onClick={onOpenAddModal}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-white font-semibold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] cursor-pointer"
-            style={{ background: 'linear-gradient(90deg, #ff007f 0%, #9b1cff 100%)' }}
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Add Sub</span>
-          </button>
 
           {/* User Account & Profile Avatar Capsule */}
           {currentUser && (

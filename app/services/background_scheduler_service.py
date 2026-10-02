@@ -172,6 +172,15 @@ def run_high_frequency_personal_reminders_sweep():
                 if diff_seconds < -20 and not rem.get("is_completed"):
                     rem_id = str(rem.get("id"))
                     cal_ev_id = rem.get("calendar_event_id")
+
+                    # Repeating reminders roll to their next occurrence instead of completing.
+                    from app.routes.personal_reminders import roll_reminder_forward, normalize_repeat
+                    if normalize_repeat(rem.get("repeat")) != "none":
+                        rolled = roll_reminder_forward(rem)
+                        if rolled:
+                            print(f"🔁 [REPEAT ROLLED] '{task_title}' -> next due {rolled.get('due_datetime')}")
+                            continue
+
                     try:
                         if supabase:
                             supabase.from_("personal_reminders").update({

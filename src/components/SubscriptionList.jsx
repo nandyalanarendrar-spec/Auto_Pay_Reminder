@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { Search, Filter, Calendar, FileText, CreditCard, ShieldAlert, CheckCircle2, Clock, Trash2, Edit3, ExternalLink, RefreshCw } from 'lucide-react';
+import { Search, Filter, Calendar, FileText, CreditCard, ShieldAlert, CheckCircle2, Clock, Trash2, Edit3, ExternalLink, RefreshCw, CheckCheck, BellOff } from 'lucide-react';
 import { CATEGORIES } from '../constants/categories';
 
 
-export default function SubscriptionList({ 
-  subscriptions, 
-  onDeleteSubscription, 
-  onToggleAutopay, 
+export default function SubscriptionList({
+  subscriptions,
+  onDeleteSubscription,
+  onToggleAutopay,
   onViewReceipt,
   onSelectSubscription,
-  onRetrySync
+  onRetrySync,
+  onMarkPaid,
+  onSnoozeAlert
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -266,6 +268,28 @@ export default function SubscriptionList({
                     <CheckCircle2 className={`w-3.5 h-3.5 ${sub.autopay_enabled ? 'text-emerald-400' : 'text-rose-400'}`} />
                     <span>{sub.autopay_enabled ? 'Autopay ON' : 'Autopay OFF'}</span>
                   </button>
+
+                  {/* Mark paid: move to next billing cycle */}
+                  {onMarkPaid && (
+                    <button
+                      onClick={() => onMarkPaid(sub)}
+                      className="p-2 rounded-xl bg-slate-900 hover:bg-emerald-950/60 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 transition-all cursor-pointer"
+                      title="Mark as paid - move to next billing cycle"
+                    >
+                      <CheckCheck className="w-4 h-4 text-emerald-400" />
+                    </button>
+                  )}
+
+                  {/* Snooze: mute today's alert for this subscription */}
+                  {onSnoozeAlert && (
+                    <button
+                      onClick={() => onSnoozeAlert(sub)}
+                      className="p-2 rounded-xl bg-slate-900 hover:bg-amber-950/60 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-amber-300 transition-all cursor-pointer"
+                      title="Snooze - mute today's alert (reminds again tomorrow)"
+                    >
+                      <BellOff className="w-4 h-4 text-amber-400" />
+                    </button>
+                  )}
 
                   {/* Receipt Vault */}
                   <button

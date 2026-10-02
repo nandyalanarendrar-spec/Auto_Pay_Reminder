@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Landmark, Calendar, Percent, CheckCircle, Plus, DollarSign, RefreshCw, Trash2 } from 'lucide-react';
+import { Landmark, Calendar, Percent, CheckCircle, Plus, DollarSign, RefreshCw, Trash2, BellOff } from 'lucide-react';
 import EMICountdownModal from './EMICountdownModal';
 
-export default function EMITrackerSection({ userEmis, onPayInstallment, onAddEmi, onRetrySync, onDeleteEmi }) {
+export default function EMITrackerSection({ userEmis, onPayInstallment, onAddEmi, onRetrySync, onDeleteEmi, onSnoozeEmi }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEmiForModal, setSelectedEmiForModal] = useState(null);
   const [newEmi, setNewEmi] = useState({
@@ -115,6 +115,19 @@ export default function EMITrackerSection({ userEmis, onPayInstallment, onAddEmi
                   }`}>
                     {isCompleted ? 'Completed' : `Due: ${emi.next_due_date}`}
                   </span>
+
+                  {onSnoozeEmi && !isCompleted && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSnoozeEmi(emi);
+                      }}
+                      className="p-1.5 rounded-lg bg-slate-900 hover:bg-amber-950/60 border border-slate-800 hover:border-amber-500/40 text-slate-400 hover:text-amber-300 transition-all ml-1"
+                      title="Snooze - mute today's alert (reminds again tomorrow)"
+                    >
+                      <BellOff className="w-3.5 h-3.5" />
+                    </button>
+                  )}
 
                   {/* EMI Delete Button */}
                   <button

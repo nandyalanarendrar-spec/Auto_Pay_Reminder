@@ -17,7 +17,8 @@ import {
   Power,
   Info,
   CreditCard,
-  AlarmClock
+  AlarmClock,
+  Repeat
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { parseLocalDate } from './PersonalRemindersPage';
@@ -43,6 +44,7 @@ export default function PersonalReminderCountdownModal({
   const [editSyncCalendar, setEditSyncCalendar] = useState(true);
   const [editSyncWhatsapp, setEditSyncWhatsapp] = useState(true);
   const [editIsImportant, setEditIsImportant] = useState(false);
+  const [editRepeat, setEditRepeat] = useState('none');
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function PersonalReminderCountdownModal({
     setEditSyncCalendar(reminder.sync_calendar !== false);
     setEditSyncWhatsapp(reminder.sync_whatsapp !== false);
     setEditIsImportant(reminder.is_important === true);
+    setEditRepeat(reminder.repeat || 'none');
 
     const calculateTimeLeft = () => {
       const target = parseLocalDate(reminder.due_datetime);
@@ -261,7 +264,8 @@ export default function PersonalReminderCountdownModal({
           reminder_offsets: editOffsets,
           sync_calendar: editSyncCalendar,
           sync_whatsapp: editSyncWhatsapp,
-          is_important: editIsImportant
+          is_important: editIsImportant,
+          repeat: editRepeat
         })
       });
 
@@ -428,6 +432,32 @@ export default function PersonalReminderCountdownModal({
                           <span>WhatsApp Alert (1h Before)</span>
                         </span>
                       </label>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                      <span className="flex items-center space-x-1 text-slate-200 mr-1">
+                        <Repeat className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Repeat</span>
+                      </span>
+                      {[
+                        { id: 'none', label: 'Once' },
+                        { id: 'daily', label: 'Daily' },
+                        { id: 'weekly', label: 'Weekly' },
+                        { id: 'monthly', label: 'Monthly' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setEditRepeat(opt.id)}
+                          className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${
+                            editRepeat === opt.id
+                              ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300'
+                              : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
 
                     <label className={`flex items-center space-x-2 cursor-pointer p-2 rounded-xl border transition-colors ${editIsImportant ? 'bg-rose-950/40 border-rose-500/50' : 'bg-slate-950 border-slate-800'}`}>

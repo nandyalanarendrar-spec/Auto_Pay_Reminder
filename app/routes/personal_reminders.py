@@ -50,6 +50,7 @@ class CustomReminderCreate(BaseModel):
     sync_calendar: bool = Field(default=True)
     sync_whatsapp: bool = Field(default=True)
     is_important: bool = Field(default=False, description="Optional: ring a loud on-screen alarm on this device when due.")
+    repeat: str = Field(default="none", description="none | daily | weekly | monthly")
 
 class CustomReminderResponse(BaseModel):
     id: str
@@ -61,6 +62,97 @@ class CustomReminderResponse(BaseModel):
     calendar_event_id: Optional[str]
     is_completed: bool
     created_at: str
+
+VALID_REPEATS = ("none", "daily", "weekly", "monthly")
+
+def normalize_repeat(value: Any) -> str:
+    v = str(value or "none").strip().lower()
+    return v if v in VALID_REPEATS else "none"
+
+def next_occurrence_iso(due_iso: str, repeat: str, after: Optional[datetime] = None) -> str:
+    """Next due datetime (IST ISO string) for a repeating reminder, strictly later than `after` (default: now)."""
+    repeat = normalize_repeat(repeat)
+    after = after or datetime.now(IST)
+    dt = datetime.fromisoformat(str(due_iso).replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=IST)
+    dt = dt.astimezone(IST)
+
+    def step(cur: datetime) -> datetime:
+        if repeat == "daily":
+            return cur + timedelta(days=1)
+        if repeat == "weekly":
+            return cur + timedelta(days=7)
+        month = cur.month % 12 + 1
+        year = cur.year + (1 if cur.month == 12 else 0)
+        day = cur.day
+        while True:
+            try:
+                return cur.replace(year=year, month=month, day=day)
+            except ValueError:
+                day -= 1
+
+    nxt = step(dt)
+    guard = 0
+    while nxt <= after and guard < 5000:
+        nxt = step(nxt)
+        guard += 1
+    return nxt.strftime("%Y-%m-%dT%H:%M:%S+05:30")
+
+def recreate_calendar_event(clean_uid: str, reminder_id: str, title: str, notes: Any,
+                            due_iso: str, offsets: List[int], old_cal_id: Optional[str]) -> Optional[str]:
+    """Replace the Google Calendar event for a reminder with one at the new due time; returns new event id."""
+    try:
+        GoogleCalendarService.delete_event_by_id_or_metadata(
+            user_id=clean_uid,
+            event_id=old_cal_id,
+            private_props={"personal_reminder_id": reminder_id}
+        )
+    except Exception as err:
+        print("Note purging old calendar event on roll-forward:", err)
+    try:
+        highest = max(offsets) if offsets else 30
+        cal_res = GoogleCalendarService.create_custom_calendar_event(
+            user_id=clean_uid,
+            title=f"⏰ {title}",
+            event_datetime=due_iso,
+            description=f"Autopay Guard Personal Reminder\nTask: {title}\nDue: {due_iso}\nNotes: {notes or 'None'}",
+            reminder_overrides=[{"method": "popup", "minutes": highest}],
+            private_props={"personal_reminder_id": reminder_id}
+        )
+        if isinstance(cal_res, dict):
+            return cal_res.get("event_id")
+    except Exception as err:
+        print("Calendar re-create on roll-forward note:", err)
+    return None
+
+def roll_reminder_forward(reminder: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Advance a repeating reminder to its next occurrence everywhere (DB, memory, calendar). None if not repeating."""
+    repeat = normalize_repeat(reminder.get("repeat"))
+    if repeat == "none":
+        return None
+    reminder_id = str(reminder.get("id"))
+    clean_uid = get_clean_uuid(reminder.get("user_id"))
+    new_due = next_occurrence_iso(reminder.get("due_datetime"), repeat)
+    offsets = reminder.get("reminder_offsets") or [30]
+    new_cal_id = None
+    if reminder.get("sync_calendar", True):
+        new_cal_id = recreate_calendar_event(clean_uid, reminder_id, reminder.get("title"), reminder.get("notes"),
+                                             new_due, offsets, reminder.get("calendar_event_id"))
+    fields = {"due_datetime": new_due, "is_completed": False, "completed_at": None, "calendar_event_id": new_cal_id}
+    try:
+        supabase = get_supabase_client()
+        if supabase:
+            supabase.from_("personal_reminders").update(fields).eq("id", reminder_id).execute()
+    except Exception as err:
+        print("Supabase roll-forward update note:", err)
+    with _in_memory_lock:
+        for r in _in_memory_reminders:
+            if r.get("id") == reminder_id:
+                r.update(fields)
+                break
+    reminder.update(fields)
+    return reminder
 
 def get_clean_uuid(user_id_val: Any) -> str:
     raw = str(user_id_val or "default_user").strip('"\'')
@@ -192,6 +284,7 @@ def create_personal_reminder(
         "sync_calendar": data.sync_calendar,
         "sync_whatsapp": final_sync_whatsapp,
         "is_important": data.is_important,
+        "repeat": normalize_repeat(data.repeat),
         "calendar_event_id": calendar_event_id,
         "is_completed": False,
         "created_at": now_iso
@@ -348,6 +441,7 @@ def update_personal_reminder(
         "sync_calendar": data.sync_calendar,
         "sync_whatsapp": final_sync_whatsapp,
         "is_important": data.is_important,
+        "repeat": normalize_repeat(data.repeat),
         "calendar_event_id": calendar_event_id
     }
 
@@ -395,6 +489,35 @@ def toggle_complete_personal_reminder(
     if current_user:
         user_id = current_user.get("id") if isinstance(current_user, dict) else getattr(current_user, "id", "default_user")
     clean_uid = get_clean_uuid(user_id)
+
+    # Repeating task being marked done: roll it to its next occurrence instead of completing it.
+    existing_rem = None
+    try:
+        sb = get_supabase_client()
+        if sb:
+            res = sb.from_("personal_reminders").select("*").eq("id", reminder_id).execute()
+            if res.data:
+                existing_rem = res.data[0]
+    except Exception as err:
+        print("Repeat check read note:", err)
+    if not existing_rem:
+        with _in_memory_lock:
+            for r in _in_memory_reminders:
+                if r.get("id") == reminder_id:
+                    existing_rem = dict(r)
+                    break
+    if existing_rem and not existing_rem.get("is_completed") and normalize_repeat(existing_rem.get("repeat")) != "none":
+        rolled = roll_reminder_forward(existing_rem)
+        if rolled:
+            return {
+                "status": "SUCCESS",
+                "id": reminder_id,
+                "is_completed": False,
+                "completed_at": None,
+                "rolled": True,
+                "due_datetime": rolled.get("due_datetime"),
+                "calendar_event_id": rolled.get("calendar_event_id")
+            }
 
     current_completed = True
     cal_event_id = None

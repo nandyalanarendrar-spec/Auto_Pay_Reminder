@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.personal_reminders (
     sync_calendar BOOLEAN DEFAULT true,
     sync_whatsapp BOOLEAN DEFAULT true,
     is_important BOOLEAN DEFAULT false,
+    repeat VARCHAR(16) DEFAULT 'none',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -27,6 +28,7 @@ ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS completed_at TIME
 ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_calendar BOOLEAN DEFAULT true;
 ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_whatsapp BOOLEAN DEFAULT true;
 ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS is_important BOOLEAN DEFAULT false;
+ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS repeat VARCHAR(16) DEFAULT 'none';
 
 -- Index for fast user scoping
 CREATE INDEX IF NOT EXISTS idx_personal_reminders_user ON public.personal_reminders(user_id);

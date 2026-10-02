@@ -198,6 +198,44 @@ class FirebaseNotificationService:
                     print(f"Error checking subscription notification date for {s.get('merchant_name') or s.get('name')}: {e}")
 
 
+        # Check Free Trials ending soon (cancel-before-charge warning, 3 days out)
+        try:
+            trials = SubscriptionService.get_user_subscriptions(clean_uid, status="trial")
+        except Exception as t_err:
+            print("Trial subscriptions fetch note:", t_err)
+            trials = []
+        for t in trials:
+            end_str = t.get("trial_end_date") or t.get("next_payment_date") or t.get("next_renewal_date")
+            if not end_str:
+                continue
+            try:
+                end_dt = datetime.strptime(str(end_str)[:10], "%Y-%m-%d").date()
+                days_remaining = (end_dt - today).days
+                if not (0 <= days_remaining <= 3):
+                    continue
+                trial_id = str(t.get("id") or t.get("merchant_name"))
+                notif_type = f"trial_{get_notif_type(days_remaining)}"
+                if NotificationLogService.is_already_notified(clean_uid, "subscription", trial_id, notif_type, today_iso):
+                    continue
+                trial_name = (t.get("merchant_name") or t.get("name") or "Free Trial").strip()
+                amount = float(t.get("amount") or 0)
+                days_text = "TODAY" if days_remaining == 0 else f"in {days_remaining} day(s)"
+                due_alerts.append({
+                    "id": trial_id,
+                    "name": trial_name,
+                    "type": "subscription",
+                    "notification_type": notif_type,
+                    "amount": amount,
+                    "next_due_date": str(end_dt),
+                    "days_remaining": days_remaining,
+                    "urgency": "HIGH",
+                    "is_free_trial": True,
+                    "title": f"⏳ Free Trial Ending: {trial_name}",
+                    "body": f"Your {trial_name} free trial ends {days_text}. Cancel before then to avoid being charged ₹{amount:,.2f}."
+                })
+            except Exception as t_err:
+                print(f"Error checking trial end date for {t.get('merchant_name')}: {t_err}")
+
         # Check EMIs
         for e in emis:
             if e.get("status") == "cancelled" or e.get("autopay_enabled") is False:

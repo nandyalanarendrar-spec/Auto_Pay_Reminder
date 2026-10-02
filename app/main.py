@@ -61,9 +61,11 @@ def startup_db_sanity_check():
                             sync_calendar BOOLEAN DEFAULT true,
                             sync_whatsapp BOOLEAN DEFAULT true,
                             is_important BOOLEAN DEFAULT false,
+                            repeat VARCHAR(16) DEFAULT 'none',
                             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                         );
                     """))
+                    conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS repeat VARCHAR(16) DEFAULT 'none';"))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;"))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_calendar BOOLEAN DEFAULT true;"))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_whatsapp BOOLEAN DEFAULT true;"))

@@ -2,13 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import DashboardStats from './components/DashboardStats';
-import SubscriptionList from './components/SubscriptionList';
-import SpendAnalytics from './components/SpendAnalytics';
+import HomeNavTiles from './components/HomeNavTiles';
+import MonthlySummaryCard from './components/MonthlySummaryCard';
+import TrialAlertBanner from './components/TrialAlertBanner';
+import SubscriptionsPage from './components/SubscriptionsPage';
+import EmisPage from './components/EmisPage';
+import CalendarPage from './components/CalendarPage';
+import MobileNav from './components/MobileNav';
 import AddSubscriptionModal from './components/AddSubscriptionModal';
 import ReceiptVaultModal from './components/ReceiptVaultModal';
 import AIChatDrawer from './components/AIChatDrawer';
 import AuthContainer from './components/auth/AuthContainer';
-import EMITrackerSection from './components/EMITrackerSection';
 import WhatIfSimulatorModal from './components/WhatIfSimulatorModal';
 import UserProfileModal from './components/UserProfileModal';
 import NotificationsCenterModal from './components/NotificationsCenterModal';
@@ -22,6 +26,7 @@ import { requestNotificationPermission, sendWebNotification, fireDueReminderNoti
 import { syncSubscriptionToCalendar, cancelSubscriptionCalendarEvent, syncEmiToCalendar, syncAllSubscriptionsToCalendar } from './utils/calendarSync';
 import { Check, ShieldAlert, Calendar } from 'lucide-react';
 import { API_BASE_URL } from './config/api';
+import { getDaysUntil, addBillingCycle, subRenewalDate, notifTypeForDays } from './utils/finance';
 
 // Helper: get Supabase auth token for backend API calls
 const getAuthTokenForSync = async () => {
@@ -349,6 +354,8 @@ export default function App() {
           next_payment_date: newSub.next_renewal_date || '2026-10-01',
           status: newSub.status || 'active',
           is_recurring: true,
+          is_free_trial: !!newSub.is_free_trial,
+          trial_end_date: newSub.is_free_trial ? (newSub.next_renewal_date || null) : null,
           autopay_enabled: killSwitchActive ? false : (newSub.autopay_enabled ?? true)
         })
       });
@@ -540,6 +547,63 @@ export default function App() {
     }
   };
 
+  // Mark a subscription as paid: advance its renewal date by one billing cycle
+  const handleMarkSubPaid = async (sub) => {
+    const currentDate = subRenewalDate(sub);
+    const nextDate = addBillingCycle(currentDate, sub.billing_cycle);
+    try {
+      const token = await getAuthTokenForSync();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/subscriptions/${sub.id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ next_payment_date: nextDate })
+      });
+
+      if (res.ok) {
+        setSubscriptions(prev => prev.map(s => s.id === sub.id
+          ? { ...s, next_renewal_date: nextDate, next_payment_date: nextDate }
+          : s));
+        showToast(`✅ ${sub.name} marked paid. Next renewal: ${nextDate}`);
+      } else {
+        showToast(`❌ Could not update ${sub.name}. Please try again.`);
+      }
+    } catch (err) {
+      console.error('Mark paid error:', err);
+      showToast(`⚠️ Error updating ${sub.name}.`);
+    }
+  };
+
+  // Snooze: log today's alert as already sent so every channel (web, push, WhatsApp) stays quiet today
+  const snoozeEntityAlerts = async (entityType, entityId, name, dateString, isTrial = false) => {
+    const baseType = notifTypeForDays(getDaysUntil(dateString));
+    const types = isTrial ? [baseType, `trial_${baseType}`] : [baseType];
+    try {
+      const token = await getAuthTokenForSync();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await Promise.all(types.map(notification_type =>
+        fetch(`${API_BASE_URL}/notifications/mark-notified`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ entity_type: entityType, entity_id: entityId, notification_type })
+        })
+      ));
+      showToast(`🔕 Alerts for ${name} muted for today. You'll be reminded again tomorrow.`);
+    } catch (err) {
+      console.error('Snooze error:', err);
+      showToast(`⚠️ Could not snooze ${name}.`);
+    }
+  };
+
+  const handleSnoozeSubAlert = (sub) =>
+    snoozeEntityAlerts('subscription', sub.id, sub.name, subRenewalDate(sub), !!(sub.is_free_trial || sub.status === 'trial'));
+
+  const handleSnoozeEmiAlert = (emi) =>
+    snoozeEntityAlerts('emi', emi.id, emi.loan_name, emi.next_due_date);
+
   // Toggle Master Emergency Kill Switch
   const handleToggleKillSwitch = async () => {
     const nextState = !killSwitchActive;
@@ -700,7 +764,7 @@ export default function App() {
 
       {/* Toast Banner */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 glass-panel border border-[#ff007f]/40 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-2 animate-bounce text-xs font-semibold bg-slate-900/90">
+        <div className="fixed bottom-20 md:bottom-6 right-6 z-50 glass-panel border border-[#ff007f]/40 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-2 animate-bounce text-xs font-semibold bg-slate-900/90">
           <Check className="w-4 h-4 text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
@@ -710,14 +774,13 @@ export default function App() {
       <Navbar
         currentUser={currentUser}
         onLogout={handleLogout}
-        onOpenAddModal={() => setIsAddModalOpen(true)}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         activeTab={activeTab}
         onSelectTab={(tab) => setActiveTab(tab)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content Area (extra bottom padding on mobile for the fixed bottom nav) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 md:pb-8">
         
         {/* Emergency Kill-Switch Active Warning Banner */}
         {killSwitchActive && (
@@ -792,38 +855,53 @@ export default function App() {
         {/* FULL PAGE CONDITIONAL RENDERING */}
         {activeTab === 'reminders' ? (
           <PersonalRemindersPage showToast={showToast} />
+        ) : activeTab === 'subscriptions' ? (
+          <SubscriptionsPage
+            subscriptions={subscriptions}
+            onBack={() => setActiveTab('dashboard')}
+            onOpenAddModal={() => setIsAddModalOpen(true)}
+            onDeleteSubscription={handleDeleteSubscription}
+            onToggleAutopay={handleToggleAutopay}
+            onViewReceipt={handleViewReceipt}
+            onSelectSubscription={(sub) => setSelectedCountdownSub(sub)}
+            onRetrySync={handleRetrySync}
+            onMarkPaid={handleMarkSubPaid}
+            onSnoozeAlert={handleSnoozeSubAlert}
+          />
+        ) : activeTab === 'emis' ? (
+          <EmisPage
+            userEmis={userEmis}
+            onBack={() => setActiveTab('dashboard')}
+            onPayInstallment={handlePayInstallment}
+            onAddEmi={handleAddEmi}
+            onRetrySync={handleRetrySync}
+            onDeleteEmi={handleDeleteEmi}
+            onSnoozeEmi={handleSnoozeEmiAlert}
+          />
+        ) : activeTab === 'calendar' ? (
+          <CalendarPage
+            subscriptions={subscriptions}
+            userEmis={userEmis}
+            onBack={() => setActiveTab('dashboard')}
+          />
         ) : (
-          <>
-            {/* Dashboard Stat Cards */}
-            <DashboardStats 
-              subscriptions={subscriptions} 
-              onToggleAiChat={() => setIsAiChatOpen(true)}
-              onOpenAddModal={() => setIsAddModalOpen(true)}
-              onOpenPersonalReminders={() => setActiveTab('reminders')}
-            />
-
-            {/* Spend Breakdown Charts */}
-            <SpendAnalytics subscriptions={subscriptions} />
-
-            {/* EMI Payoff Tracker Section */}
-            <EMITrackerSection
-              userEmis={userEmis}
-              onPayInstallment={handlePayInstallment}
-              onAddEmi={handleAddEmi}
-              onRetrySync={handleRetrySync}
-              onDeleteEmi={handleDeleteEmi}
-            />
-
-            {/* Active Subscriptions List */}
-            <SubscriptionList
+          <div className="max-w-2xl mx-auto space-y-6">
+            <DashboardStats
               subscriptions={subscriptions}
-              onDeleteSubscription={handleDeleteSubscription}
-              onToggleAutopay={handleToggleAutopay}
-              onViewReceipt={handleViewReceipt}
-              onSelectSubscription={(sub) => setSelectedCountdownSub(sub)}
-              onRetrySync={handleRetrySync}
+              onToggleAiChat={() => setIsAiChatOpen(true)}
+              onOpenSubscriptions={() => setActiveTab('subscriptions')}
             />
-          </>
+
+            <TrialAlertBanner subscriptions={subscriptions} onNavigate={setActiveTab} />
+
+            <HomeNavTiles
+              subscriptions={subscriptions}
+              userEmis={userEmis}
+              onNavigate={setActiveTab}
+            />
+
+            <MonthlySummaryCard subscriptions={subscriptions} userEmis={userEmis} />
+          </div>
         )}
 
       </main>
@@ -912,12 +990,14 @@ export default function App() {
       {/* Floating Bottom-Right WhatsApp Quick Activation Pill */}
       <button
         onClick={() => setIsWhatsAppModalOpen(true)}
-        className="fixed bottom-6 left-6 z-40 px-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/40 flex items-center space-x-2 transition-all hover:scale-105 cursor-pointer animate-pulse"
+        className="fixed bottom-20 md:bottom-6 left-6 z-40 px-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-2xl border border-emerald-400/40 flex items-center space-x-2 transition-all hover:scale-105 cursor-pointer animate-pulse"
         title="Activate WhatsApp Alerts (Meta 24h Rule)"
       >
         <span className="text-base">💬</span>
         <span>Send 'Hi' on WhatsApp</span>
       </button>
+
+      <MobileNav activeTab={activeTab} onSelectTab={(tab) => setActiveTab(tab)} />
 
       </div>
     </div>

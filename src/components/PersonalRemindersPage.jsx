@@ -26,7 +26,7 @@ import AlarmModal from './AlarmModal';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { sendWebNotification, requestNotificationPermission } from '../utils/browserNotifications';
 import { API_BASE_URL } from '../config/api';
-import { AlarmClock } from 'lucide-react';
+import { AlarmClock, Repeat } from 'lucide-react';
 
 // Backend values always carry an explicit UTC offset (usually "+05:30" IST). Any
 // string with an explicit offset (Z, +HH:MM, -HH:MM) is parsed natively — the
@@ -91,6 +91,7 @@ export default function PersonalRemindersPage({ showToast }) {
   const [syncCalendar, setSyncCalendar] = useState(true);
   const [syncWhatsapp, setSyncWhatsapp] = useState(true);
   const [isImportant, setIsImportant] = useState(false);
+  const [repeat, setRepeat] = useState('none');
 
   // Full-screen ringing alarm (optional, per-reminder, only while this tab is open)
   const [activeAlarmReminder, setActiveAlarmReminder] = useState(null);
@@ -98,8 +99,8 @@ export default function PersonalRemindersPage({ showToast }) {
   const minutesUntilDue = dueDatetime ? (parseLocalDate(dueDatetime) - new Date()) / (1000 * 60) : 9999;
   const isWhatsappAvailable = minutesUntilDue >= 60;
 
-  const fetchReminders = async () => {
-    setIsLoading(true);
+  const fetchReminders = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       let token = null;
       if (isSupabaseConfigured && supabase) {
@@ -114,18 +115,21 @@ export default function PersonalRemindersPage({ showToast }) {
       if (res.ok) {
         const data = await res.json();
         setReminders(data);
-      } else if (showToast) {
+      } else if (showToast && !silent) {
         showToast("⚠️ Could not load personal reminders from server.");
       }
     } catch (err) {
       console.warn("Fetch personal reminders note:", err);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchReminders();
+    // Quiet background refresh so server-side auto-complete / repeat roll-forward shows up without a reload
+    const refreshId = setInterval(() => fetchReminders(true), 60000);
+    return () => clearInterval(refreshId);
   }, []);
 
   const handleToggleComplete = async (id, e) => {
@@ -146,11 +150,22 @@ export default function PersonalRemindersPage({ showToast }) {
 
       if (res.ok) {
         const data = await res.json();
-        setReminders(prev => prev.map(r => r.id === id ? { ...r, is_completed: data.is_completed, completed_at: data.completed_at || null } : r));
+        const patch = {
+          is_completed: data.is_completed,
+          completed_at: data.completed_at || null,
+          ...(data.rolled ? { due_datetime: data.due_datetime, calendar_event_id: data.calendar_event_id } : {})
+        };
+        setReminders(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
         if (selectedReminderForModal?.id === id) {
-          setSelectedReminderForModal(prev => ({ ...prev, is_completed: data.is_completed, completed_at: data.completed_at || null }));
+          setSelectedReminderForModal(prev => ({ ...prev, ...patch }));
         }
-        if (showToast) showToast(data.is_completed ? "✅ Task marked as Completed!" : "⏳ Task reactivated as Active!");
+        if (showToast) {
+          showToast(
+            data.rolled
+              ? `🔁 Done! Repeating task moved to its next occurrence.`
+              : data.is_completed ? "✅ Task marked as Completed!" : "⏳ Task reactivated as Active!"
+          );
+        }
       } else {
         if (showToast) showToast("❌ Failed to update task status. Please try again.");
       }
@@ -186,7 +201,7 @@ export default function PersonalRemindersPage({ showToast }) {
           const inWindow = diffMs <= targetOffsetMs + 5000 && diffMs >= -120000;
 
           if (inWindow) {
-            const key = `${rem.id}_offset_${offset}`;
+            const key = `${rem.id}_${rem.due_datetime}_offset_${offset}`;
             if (!firedMap[key]) {
               firedMap[key] = true;
               sessionStorage.setItem(firedMapKey, JSON.stringify(firedMap));
@@ -298,7 +313,8 @@ export default function PersonalRemindersPage({ showToast }) {
           reminder_offsets: selectedOffsets,
           sync_calendar: syncCalendar,
           sync_whatsapp: syncWhatsapp,
-          is_important: isImportant
+          is_important: isImportant,
+          repeat
         })
       });
 
@@ -312,6 +328,7 @@ export default function PersonalRemindersPage({ showToast }) {
         setCategory('General');
         setDueDatetime(getTomorrowDefault());
         setIsImportant(false);
+        setRepeat('none');
       } else {
         if (showToast) showToast("❌ Failed to create custom reminder.");
       }
@@ -711,6 +728,32 @@ export default function PersonalRemindersPage({ showToast }) {
                   </div>
                 )}
 
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="flex items-center space-x-1 text-slate-300 mr-1">
+                    <Repeat className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Repeat</span>
+                  </span>
+                  {[
+                    { id: 'none', label: 'Once' },
+                    { id: 'daily', label: 'Daily' },
+                    { id: 'weekly', label: 'Weekly' },
+                    { id: 'monthly', label: 'Monthly' }
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setRepeat(opt.id)}
+                      className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${
+                        repeat === opt.id
+                          ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
                 <label className={`flex items-center space-x-2 cursor-pointer p-2 rounded-xl border transition-colors ${isImportant ? 'bg-rose-950/40 border-rose-500/50' : 'bg-slate-950 border-slate-800'}`}>
                   <input
                     type="checkbox"
@@ -915,6 +958,13 @@ export default function PersonalRemindersPage({ showToast }) {
                           <Eye className="w-3 h-3 text-cyan-400" />
                           <span>3D Gauge</span>
                         </span>
+
+                        {rem.repeat && rem.repeat !== 'none' && !isDone && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40 flex items-center space-x-1">
+                            <Repeat className="w-3 h-3 text-cyan-400" />
+                            <span>Repeats {rem.repeat}</span>
+                          </span>
+                        )}
 
                         {rem.is_important && !isDone && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-500/50 flex items-center space-x-1 animate-pulse">
