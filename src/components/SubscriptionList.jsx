@@ -174,7 +174,7 @@ export default function SubscriptionList({
                         <Clock className="w-3.5 h-3.5 text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </h4>
                       {isTrial && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-full">
+                        <span className="px-2 py-0.5 text-[0.625rem] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-full">
                           FREE TRIAL
                         </span>
                       )}
@@ -208,7 +208,7 @@ export default function SubscriptionList({
                     <p className="text-xs text-slate-400">Next Autopay Date</p>
                     <div className="flex items-center space-x-1.5 mt-0.5">
                       <span className="text-sm font-semibold text-slate-200">{sub.next_renewal_date}</span>
-                      <span className={`px-2 py-0.5 text-[11px] font-bold rounded-lg ${
+                      <span className={`px-2 py-0.5 text-[0.6875rem] font-bold rounded-lg ${
                         daysLeft <= 2 
                           ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse'
                           : daysLeft <= 7 
@@ -239,7 +239,7 @@ export default function SubscriptionList({
                     </button>
                   ) : sub.calendar_sync_status?.toUpperCase() === 'SYNCED' && sub.calendar_event_id && !String(sub.calendar_event_id).startsWith('sim-') ? (
                     <span 
-                      className="hidden sm:flex items-center space-x-1 px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-medium border border-emerald-500/20"
+                      className="hidden sm:flex items-center space-x-1 px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[0.625rem] font-medium border border-emerald-500/20"
                       title="Synced to Google Calendar"
                     >
                       <Calendar className="w-3 h-3 text-emerald-400" />
@@ -247,7 +247,7 @@ export default function SubscriptionList({
                     </span>
                   ) : (
                     <span 
-                      className="hidden sm:flex items-center space-x-1 px-2 py-1 rounded-lg bg-amber-500/10 text-amber-300 text-[10px] font-medium border border-amber-500/20"
+                      className="hidden sm:flex items-center space-x-1 px-2 py-1 rounded-lg bg-amber-500/10 text-amber-300 text-[0.625rem] font-medium border border-amber-500/20"
                       title="Google Calendar not connected yet. Connect Google Calendar in Settings to enable live sync."
                     >
                       <Calendar className="w-3 h-3 text-amber-400" />

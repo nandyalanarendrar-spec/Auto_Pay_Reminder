@@ -54,9 +54,9 @@ function Tile({ id, icon: Icon, title, stat, caption, badge, onClick }) {
       <div className="mt-4">
         <h4 className={`text-sm font-bold text-white transition-colors ${s.text}`}>{title}</h4>
         <p className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">{stat}</p>
-        <p className="text-[11px] text-slate-400 mt-0.5 truncate">{caption}</p>
+        <p className="text-[0.6875rem] text-slate-400 mt-0.5 truncate">{caption}</p>
         {badge ? (
-          <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
+          <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-[0.625rem] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
             {badge}
           </span>
         ) : null}

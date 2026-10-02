@@ -187,7 +187,7 @@ export default function PersonalReminderCountdownModal({
           </div>
         </div>
 
-        <span className="text-[10px] sm:text-[11px] font-black tracking-widest text-cyan-400 uppercase mt-2">
+        <span className="text-[0.625rem] sm:text-[0.6875rem] font-black tracking-widest text-cyan-400 uppercase mt-2">
           {label}
         </span>
       </div>
@@ -308,12 +308,12 @@ export default function PersonalReminderCountdownModal({
               <div className="flex items-center space-x-3 flex-wrap gap-y-1">
                 <h3 className="text-xl font-black text-white tracking-tight">{reminder.title}</h3>
                 {isModalTaskDone ? (
-                  <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-950/90 text-emerald-400 border border-emerald-500/50 uppercase tracking-wider flex items-center space-x-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  <span className="px-3 py-1 rounded-full text-[0.6875rem] font-extrabold bg-emerald-950/90 text-emerald-400 border border-emerald-500/50 uppercase tracking-wider flex items-center space-x-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     <span>TASK COMPLETED</span>
                   </span>
                 ) : (
-                  <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-950/90 text-emerald-400 border border-emerald-500/50 uppercase tracking-wider flex items-center space-x-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  <span className="px-3 py-1 rounded-full text-[0.6875rem] font-extrabold bg-emerald-950/90 text-emerald-400 border border-emerald-500/50 uppercase tracking-wider flex items-center space-x-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     <span>TASK ACTIVE</span>
                   </span>
@@ -449,7 +449,7 @@ export default function PersonalReminderCountdownModal({
                           key={opt.id}
                           type="button"
                           onClick={() => setEditRepeat(opt.id)}
-                          className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-lg border text-[0.6875rem] font-bold transition-all cursor-pointer ${
                             editRepeat === opt.id
                               ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300'
                               : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
@@ -483,7 +483,7 @@ export default function PersonalReminderCountdownModal({
                     <Bell className="w-3.5 h-3.5 text-amber-400" />
                     <span>App Push Alert Timing Offsets</span>
                   </span>
-                  <span className="text-[10px] text-slate-400 font-normal">{editOffsets.length} Alert Times</span>
+                  <span className="text-[0.625rem] text-slate-400 font-normal">{editOffsets.length} Alert Times</span>
                 </label>
 
                 <div className="flex flex-wrap gap-2">
@@ -545,7 +545,7 @@ export default function PersonalReminderCountdownModal({
               <div className="bg-[#060a14] border border-slate-800/80 rounded-2xl p-6 sm:p-8 text-center space-y-6 shadow-inner relative overflow-hidden">
                 
                 {/* Centered Pill Badge */}
-                <div className="inline-flex items-center space-x-2 px-5 py-1.5 rounded-full bg-[#081b29] border border-cyan-500/40 text-cyan-400 text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_12px_rgba(0,242,254,0.2)]">
+                <div className="inline-flex items-center space-x-2 px-5 py-1.5 rounded-full bg-[#081b29] border border-cyan-500/40 text-cyan-400 text-[0.6875rem] font-extrabold uppercase tracking-widest shadow-[0_0_12px_rgba(0,242,254,0.2)]">
                   <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
                   <span className="w-2 h-2 rounded-full bg-cyan-400 absolute" />
                   <span className="pl-2">TIME REMAINING UNTIL NEXT AUTOPAY DEBIT</span>
@@ -579,7 +579,7 @@ export default function PersonalReminderCountdownModal({
                   
                   {/* Card 1: Monthly Outflow */}
                   <div className="p-4 rounded-2xl bg-[#060a14] border border-slate-800/80 space-y-1.5 shadow-md">
-                    <span className="text-[11px] font-semibold text-slate-400 block">Monthly Outflow</span>
+                    <span className="text-[0.6875rem] font-semibold text-slate-400 block">Monthly Outflow</span>
                     <div className="flex items-baseline space-x-1">
                       <span className="text-xl sm:text-2xl font-black text-white">₹649.00</span>
                       <span className="text-xs text-slate-400 font-semibold">/monthly</span>
@@ -588,7 +588,7 @@ export default function PersonalReminderCountdownModal({
 
                   {/* Card 2: Next Renewal Date */}
                   <div className="p-4 rounded-2xl bg-[#060a14] border border-slate-800/80 space-y-1.5 shadow-md">
-                    <span className="text-[11px] font-semibold text-slate-400 block">Next Renewal Date</span>
+                    <span className="text-[0.6875rem] font-semibold text-slate-400 block">Next Renewal Date</span>
                     <span className="text-lg font-extrabold text-[#00f2fe] block tracking-wide drop-shadow-[0_0_8px_rgba(0,242,254,0.4)]">
                       {dueDateFormattedIso}
                     </span>
@@ -596,7 +596,7 @@ export default function PersonalReminderCountdownModal({
 
                   {/* Card 3: Category & Plan */}
                   <div className="p-4 rounded-2xl bg-[#060a14] border border-slate-800/80 space-y-1.5 shadow-md">
-                    <span className="text-[11px] font-semibold text-slate-400 block">Category & Plan</span>
+                    <span className="text-[0.6875rem] font-semibold text-slate-400 block">Category & Plan</span>
                     <span className="text-sm font-bold text-white block truncate">
                       {reminder.notes?.includes('Category:') ? reminder.notes.split(']')[0].replace('[Category:', '').trim() : 'Entertainment'}
                     </span>
@@ -604,7 +604,7 @@ export default function PersonalReminderCountdownModal({
 
                   {/* Card 4: Payment Method */}
                   <div className="p-4 rounded-2xl bg-[#060a14] border border-slate-800/80 space-y-1.5 shadow-md">
-                    <span className="text-[11px] font-semibold text-slate-400 block">Payment Method</span>
+                    <span className="text-[0.6875rem] font-semibold text-slate-400 block">Payment Method</span>
                     <div className="flex items-center space-x-2 text-white">
                       <CreditCard className="w-4 h-4 text-indigo-400 shrink-0" />
                       <span className="text-sm font-bold truncate">UPI Autopay</span>

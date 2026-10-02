@@ -63,10 +63,10 @@ export default function Sidebar({
     }
   };
 
-  const iconBtnClass = "p-3 sm:p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-indigo-500/60 text-slate-300 hover:text-white transition-all cursor-pointer relative group";
+  const iconBtnClass = "p-3 sm:p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-indigo-500/60 text-slate-300 hover:text-white transition-all cursor-pointer relative group";
 
   return (
-    <aside className="flex sticky top-0 self-start h-screen w-16 sm:w-20 flex-shrink-0 flex-col items-center py-4 gap-3 sm:gap-4 bg-slate-950/95 border-r border-slate-800/80 backdrop-blur-xl z-20">
+    <aside className="flex sticky top-0 self-start h-screen w-16 sm:w-24 flex-shrink-0 flex-col items-center py-5 gap-3 sm:gap-5 bg-slate-950/95 border-r border-slate-800/80 backdrop-blur-xl z-20">
 
       {/* Tools & Reports (flyout) */}
       <div className="relative" ref={toolsRef}>
@@ -75,12 +75,12 @@ export default function Sidebar({
           className={iconBtnClass}
           title="Tools & Reports"
         >
-          <Wrench className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-400 group-hover:scale-110 transition-transform" />
+          <Wrench className="w-7 h-7 sm:w-9 sm:h-9 text-indigo-400 group-hover:scale-110 transition-transform" />
         </button>
 
         {isToolsOpen && (
           <div className="absolute left-full top-0 ml-2 w-56 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150">
-            <div className="text-[10px] font-bold text-slate-500 uppercase px-3 py-1 tracking-wider">
+            <div className="text-[0.625rem] font-bold text-slate-500 uppercase px-3 py-1 tracking-wider">
               Emergency Control
             </div>
             <button
@@ -95,7 +95,7 @@ export default function Sidebar({
               <span>{killSwitchActive ? 'Kill-Switch: ACTIVE' : 'Autopay Status: ON'}</span>
             </button>
 
-            <div className="text-[10px] font-bold text-slate-500 uppercase px-3 py-1 mt-2 tracking-wider">
+            <div className="text-[0.625rem] font-bold text-slate-500 uppercase px-3 py-1 mt-2 tracking-wider">
               Analytics & Reports
             </div>
             <button
@@ -127,14 +127,14 @@ export default function Sidebar({
 
       {/* WhatsApp Alert */}
       <button onClick={onOpenWhatsAppModal} className={iconBtnClass} title="Activate WhatsApp Alerts">
-        <MessageSquare className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400 group-hover:scale-110 transition-transform" />
+        <MessageSquare className="w-7 h-7 sm:w-9 sm:h-9 text-emerald-400 group-hover:scale-110 transition-transform" />
         <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
         <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full" />
       </button>
 
       {/* Notifications Bell */}
       <button onClick={onEnableNotifications} className={iconBtnClass} title="Enable Web Notifications">
-        <Bell className="w-6 h-6 sm:w-7 sm:h-7 text-amber-400 group-hover:scale-110 transition-transform" />
+        <Bell className="w-7 h-7 sm:w-9 sm:h-9 text-amber-400 group-hover:scale-110 transition-transform" />
         <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full animate-ping" />
         <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full" />
       </button>
@@ -144,23 +144,23 @@ export default function Sidebar({
       {/* Theme Toggle */}
       <button onClick={onToggleTheme} className={iconBtnClass} title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}>
         {theme === 'dark' ? (
-          <Sun className="w-6 h-6 sm:w-7 sm:h-7 text-amber-400 group-hover:rotate-45 transition-transform" />
+          <Sun className="w-7 h-7 sm:w-9 sm:h-9 text-amber-400 group-hover:rotate-45 transition-transform" />
         ) : (
-          <Moon className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-500 group-hover:-rotate-12 transition-transform" />
+          <Moon className="w-7 h-7 sm:w-9 sm:h-9 text-indigo-500 group-hover:-rotate-12 transition-transform" />
         )}
       </button>
 
       {/* PWA Install */}
       <button
         onClick={onInstallPwa}
-        className={`p-3 sm:p-3.5 rounded-2xl border transition-all cursor-pointer relative group ${
+        className={`p-3 sm:p-4 rounded-2xl border transition-all cursor-pointer relative group ${
           canInstallPwa
             ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-md animate-pulse'
             : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
         }`}
         title="Install Mobile/Desktop App"
       >
-        <Smartphone className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400 group-hover:scale-110 transition-transform" />
+        <Smartphone className="w-7 h-7 sm:w-9 sm:h-9 text-emerald-400 group-hover:scale-110 transition-transform" />
       </button>
 
     </aside>

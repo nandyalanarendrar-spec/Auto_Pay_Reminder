@@ -202,7 +202,7 @@ export default function AddSubscriptionModal({ isOpen, onClose, onAddSubscriptio
                 <span className="text-xs text-slate-300 font-medium">
                   {receiptFile ? receiptFile.name : 'Click to select receipt image or PDF'}
                 </span>
-                <span className="text-[10px] text-slate-500">Vaulted in Supabase Storage</span>
+                <span className="text-[0.625rem] text-slate-500">Vaulted in Supabase Storage</span>
               </label>
             </div>
           </div>

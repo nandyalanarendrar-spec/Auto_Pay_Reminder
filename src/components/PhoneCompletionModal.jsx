@@ -217,7 +217,7 @@ export default function PhoneCompletionModal({
                 <button
                   type="button"
                   onClick={() => setOtpStep('input')}
-                  className="text-[11px] font-bold text-amber-400 hover:underline cursor-pointer"
+                  className="text-[0.6875rem] font-bold text-amber-400 hover:underline cursor-pointer"
                 >
                   Edit
                 </button>

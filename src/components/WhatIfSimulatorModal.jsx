@@ -40,12 +40,12 @@ export default function WhatIfSimulatorModal({ isOpen, onClose, subscriptions })
         {/* Savings Results Banner */}
         <div className="bg-gradient-to-r from-indigo-950/80 via-purple-950/80 to-slate-900 border border-indigo-500/40 rounded-2xl p-4 mb-5 flex justify-between items-center">
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-indigo-300 font-semibold">Simulated Monthly Savings</p>
+            <p className="text-[0.6875rem] uppercase tracking-wider text-indigo-300 font-semibold">Simulated Monthly Savings</p>
             <p className="text-2xl font-extrabold text-white mt-0.5">₹{monthlySavings.toLocaleString('en-IN')}<span className="text-xs text-slate-400 font-normal">/mo</span></p>
           </div>
 
           <div className="text-right border-l border-slate-800 pl-4">
-            <p className="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold">Annual Projected Savings</p>
+            <p className="text-[0.6875rem] uppercase tracking-wider text-emerald-400 font-semibold">Annual Projected Savings</p>
             <p className="text-lg font-bold text-emerald-300 mt-0.5">₹{yearlySavings.toLocaleString('en-IN')}<span className="text-xs text-slate-400 font-normal">/yr</span></p>
           </div>
         </div>
@@ -69,7 +69,7 @@ export default function WhatIfSimulatorModal({ isOpen, onClose, subscriptions })
                   </div>
                   <div>
                     <p className="text-xs font-bold text-white">{sub.name}</p>
-                    <p className="text-[10px] text-slate-400">{sub.category}</p>
+                    <p className="text-[0.625rem] text-slate-400">{sub.category}</p>
                   </div>
                 </div>
 

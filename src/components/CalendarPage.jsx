@@ -157,7 +157,7 @@ export default function CalendarPage({ subscriptions, userEmis, onBack }) {
           </div>
           <div>
             <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">Payment Calendar</h2>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Renewals, EMIs, trials and reminders on one view</p>
+            <p className="text-[0.6875rem] text-slate-400 hidden sm:block">Renewals, EMIs, trials and reminders on one view</p>
           </div>
         </div>
         <button
@@ -175,7 +175,7 @@ export default function CalendarPage({ subscriptions, userEmis, onBack }) {
           </button>
           <div className="text-center">
             <h3 className="text-base font-bold text-white">{monthLabel}</h3>
-            <p className="text-[11px] text-slate-400">{formatINR(monthTotal)} scheduled</p>
+            <p className="text-[0.6875rem] text-slate-400">{formatINR(monthTotal)} scheduled</p>
           </div>
           <button onClick={() => shiftMonth(1)} className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer" title="Next month">
             <ChevronRight className="w-4 h-4" />
@@ -184,7 +184,7 @@ export default function CalendarPage({ subscriptions, userEmis, onBack }) {
 
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center">
           {WEEKDAYS.map((w) => (
-            <div key={w} className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase py-1">{w}</div>
+            <div key={w} className="text-[0.625rem] sm:text-[0.6875rem] font-bold text-slate-500 uppercase py-1">{w}</div>
           ))}
           {cells.map((day, idx) => {
             if (!day) return <div key={`empty-${idx}`} />;
@@ -213,7 +213,7 @@ export default function CalendarPage({ subscriptions, userEmis, onBack }) {
           })}
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-4 text-[11px] text-slate-400">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-4 text-[0.6875rem] text-slate-400">
           {Object.values(KIND_STYLE).map((k) => (
             <span key={k.label} className="flex items-center space-x-1.5">
               <span className={`w-2 h-2 rounded-full ${k.dot}`} />
@@ -237,7 +237,7 @@ export default function CalendarPage({ subscriptions, userEmis, onBack }) {
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${KIND_STYLE[ev.kind].dot}`} />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">{ev.name}</p>
-                    <p className={`text-[11px] ${KIND_STYLE[ev.kind].text}`}>
+                    <p className={`text-[0.6875rem] ${KIND_STYLE[ev.kind].text}`}>
                       {KIND_STYLE[ev.kind].label}{ev.note ? ` · ${ev.note}` : ''}
                     </p>
                   </div>

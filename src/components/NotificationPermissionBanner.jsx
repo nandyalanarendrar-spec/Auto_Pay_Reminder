@@ -148,7 +148,7 @@ export const NotificationPermissionBanner = ({ onPermissionGranted }) => {
                 <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center shrink-0">1</span>
                 <div>
                   <span className="font-bold text-white">Click the Lock / Tuning icon 🔒</span>
-                  <p className="text-slate-400 text-[11px]">Located on the far left side of your browser address bar (next to <code>http://localhost:5173</code>).</p>
+                  <p className="text-slate-400 text-[0.6875rem]">Located on the far left side of your browser address bar (next to <code>http://localhost:5173</code>).</p>
                 </div>
               </div>
 
@@ -156,7 +156,7 @@ export const NotificationPermissionBanner = ({ onPermissionGranted }) => {
                 <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center shrink-0">2</span>
                 <div>
                   <span className="font-bold text-white">Toggle "Notifications" to ALLOW</span>
-                  <p className="text-slate-400 text-[11px]">Find the <b>Notifications</b> permission setting and change it from <i>Block</i> to <b>Allow</b>.</p>
+                  <p className="text-slate-400 text-[0.6875rem]">Find the <b>Notifications</b> permission setting and change it from <i>Block</i> to <b>Allow</b>.</p>
                 </div>
               </div>
 
@@ -164,7 +164,7 @@ export const NotificationPermissionBanner = ({ onPermissionGranted }) => {
                 <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center shrink-0">3</span>
                 <div>
                   <span className="font-bold text-white">Click "Check Permission Again" below</span>
-                  <p className="text-slate-400 text-[11px]">Or reload the page to activate your desktop payment notifications.</p>
+                  <p className="text-slate-400 text-[0.6875rem]">Or reload the page to activate your desktop payment notifications.</p>
                 </div>
               </div>
             </div>

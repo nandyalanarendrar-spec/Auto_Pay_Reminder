@@ -426,7 +426,7 @@ export default function UserProfileModal({
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2">
                 <span>{userName}</span>
-                <span className="px-2 py-0.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 rounded-full">
+                <span className="px-2 py-0.5 text-[0.625rem] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 rounded-full">
                   PRO MEMBER
                 </span>
               </h2>
@@ -554,7 +554,7 @@ export default function UserProfileModal({
                       <button
                         type="button"
                         onClick={() => setIsEditingProfile(true)}
-                        className="px-2 py-0.5 text-[10px] font-bold text-emerald-300 bg-emerald-950 border border-emerald-500/40 rounded hover:bg-emerald-900 transition-colors cursor-pointer"
+                        className="px-2 py-0.5 text-[0.625rem] font-bold text-emerald-300 bg-emerald-950 border border-emerald-500/40 rounded hover:bg-emerald-900 transition-colors cursor-pointer"
                       >
                         ✏️ Change
                       </button>
@@ -566,7 +566,7 @@ export default function UserProfileModal({
                       <Key className="w-3.5 h-3.5 text-rose-400" />
                       <span>User Account ID</span>
                     </span>
-                    <span className="font-mono text-[11px] text-slate-400 truncate max-w-[180px]" title={userId}>
+                    <span className="font-mono text-[0.6875rem] text-slate-400 truncate max-w-[180px]" title={userId}>
                       {userId}
                     </span>
                   </div>
@@ -624,7 +624,7 @@ export default function UserProfileModal({
                         />
                       </div>
 
-                      <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-[11px] text-indigo-200 leading-relaxed flex items-start space-x-2">
+                      <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-[0.6875rem] text-indigo-200 leading-relaxed flex items-start space-x-2">
                         <Mail className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                         <span>Security Check: A 6-digit OTP code will be sent to <strong>{userEmail}</strong> to verify your identity before saving your new mobile number.</span>
                       </div>
@@ -646,7 +646,7 @@ export default function UserProfileModal({
                           <button
                             type="button"
                             onClick={() => setOtpStep('input')}
-                            className="text-[11px] font-bold text-amber-400 hover:underline cursor-pointer"
+                            className="text-[0.6875rem] font-bold text-amber-400 hover:underline cursor-pointer"
                           >
                             Edit Number
                           </button>
@@ -654,7 +654,7 @@ export default function UserProfileModal({
                         <p className="text-sm font-bold text-emerald-300 font-mono">{editPhone}</p>
                       </div>
 
-                      <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-200 space-y-1">
+                      <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[0.6875rem] text-emerald-200 space-y-1">
                         <p className="font-bold flex items-center space-x-1.5 text-emerald-300">
                           <span>📩 6-Digit OTP Dispatched</span>
                         </p>
@@ -708,7 +708,7 @@ export default function UserProfileModal({
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-amber-200/70 leading-relaxed">
+                  <p className="text-[0.6875rem] text-amber-200/70 leading-relaxed">
                     Deletes all subscriptions, EMIs, transaction history, and calendar reminders from the database. Your login session and account remain active.
                   </p>
 
@@ -722,7 +722,7 @@ export default function UserProfileModal({
                     </button>
                   ) : (
                     <div className="space-y-3 pt-2 border-t border-amber-900/50 animate-fadeIn">
-                      <p className="text-[11px] font-medium text-amber-200">
+                      <p className="text-[0.6875rem] font-medium text-amber-200">
                         Are you sure? This permanently deletes all your subscriptions and EMIs from the database.
                       </p>
 
@@ -757,7 +757,7 @@ export default function UserProfileModal({
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-rose-300/80 leading-relaxed">
+                  <p className="text-[0.6875rem] text-rose-300/80 leading-relaxed">
                     Permanently delete your account, subscriptions, EMIs, bank logs, receipts, and revoke Google Calendar OAuth tokens.
                   </p>
 
@@ -771,7 +771,7 @@ export default function UserProfileModal({
                     </button>
                   ) : (
                     <div className="space-y-3 pt-1 border-t border-rose-900/60 animate-fadeIn">
-                      <p className="text-[11px] font-semibold text-rose-300">
+                      <p className="text-[0.6875rem] font-semibold text-rose-300">
                         Type <span className="font-mono text-white bg-rose-900 px-1 rounded">DELETE</span> below to confirm:
                       </p>
                       
@@ -822,7 +822,7 @@ export default function UserProfileModal({
                       <Calendar className="w-4 h-4 text-emerald-400" />
                       <span>Google Calendar Sync Status</span>
                     </h3>
-                    <p className="text-[11px] text-slate-400">Automatic background calendar event creation</p>
+                    <p className="text-[0.6875rem] text-slate-400">Automatic background calendar event creation</p>
                   </div>
 
                   {calStatus.is_connected ? (
@@ -841,7 +841,7 @@ export default function UserProfileModal({
                   {calStatus.is_connected ? (
                     <div className="space-y-1">
                       <p>Linked Google Account: <span className="font-semibold text-emerald-300">{calStatus.connected_email || userEmail}</span></p>
-                      <p className="text-[11px] text-slate-400">Google OAuth 2.0 authorization active. All subscription and EMI events sync automatically in background.</p>
+                      <p className="text-[0.6875rem] text-slate-400">Google OAuth 2.0 authorization active. All subscription and EMI events sync automatically in background.</p>
                     </div>
                   ) : (
                     <p className="text-slate-400">Authorize Google Calendar ONE TIME. After authorization, all subscription payment dates and EMI due dates will automatically create, update, and purge with zero manual button clicks or "Save" popups.</p>
@@ -892,7 +892,7 @@ export default function UserProfileModal({
 
                   <button
                     onClick={checkGoogleCalendarStatus}
-                    className="w-full py-1.5 text-[11px] text-slate-400 hover:text-slate-200 cursor-pointer text-center"
+                    className="w-full py-1.5 text-[0.6875rem] text-slate-400 hover:text-slate-200 cursor-pointer text-center"
                   >
                     Refresh Connection Status
                   </button>

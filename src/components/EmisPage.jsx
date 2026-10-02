@@ -32,7 +32,7 @@ export default function EmisPage({ userEmis, onBack, ...emiHandlers }) {
         </div>
         <div>
           <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">EMIs & Loans</h2>
-          <p className="text-[11px] text-slate-400 hidden sm:block">Installments, payoff progress and due dates</p>
+          <p className="text-[0.6875rem] text-slate-400 hidden sm:block">Installments, payoff progress and due dates</p>
         </div>
       </div>
 
@@ -44,7 +44,7 @@ export default function EmisPage({ userEmis, onBack, ...emiHandlers }) {
         ].map((c) => (
           <div key={c.label} className="glass-card-dark rounded-2xl p-3 sm:p-4 border border-white/10 text-center">
             <p className={`text-lg sm:text-2xl font-black ${c.warn ? 'text-amber-300' : 'text-white'}`}>{c.value}</p>
-            <p className="text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-wider font-semibold mt-0.5 truncate">{c.label}</p>
+            <p className="text-[0.625rem] sm:text-[0.6875rem] text-slate-400 uppercase tracking-wider font-semibold mt-0.5 truncate">{c.label}</p>
           </div>
         ))}
       </div>

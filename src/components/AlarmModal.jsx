@@ -39,7 +39,7 @@ export default function AlarmModal({ reminder, onDismiss, onSnooze }) {
           <AlarmClock className="w-10 h-10 text-rose-400" />
         </div>
 
-        <div className="text-[11px] font-bold text-rose-400 uppercase tracking-widest mb-2">
+        <div className="text-[0.6875rem] font-bold text-rose-400 uppercase tracking-widest mb-2">
           Most Important Task Due
         </div>
         <h2 className="text-2xl font-extrabold text-white mb-2 break-words">

@@ -93,24 +93,24 @@ export default function EMITrackerSection({ userEmis, onPayInstallment, onAddEmi
                         e.stopPropagation();
                         onRetrySync && onRetrySync(emi.id, 'emi');
                       }}
-                      className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-[10px] font-semibold transition-all group/btn"
+                      className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-[0.625rem] font-semibold transition-all group/btn"
                       title={emi.calendar_sync_error ? `Calendar Sync Failed: ${emi.calendar_sync_error}. Click to retry.` : "Calendar sync failed. Click to retry."}
                     >
                       <RefreshCw className="w-3 h-3 text-rose-400 group-hover/btn:rotate-180 transition-transform duration-500" />
                       <span>Retry</span>
                     </button>
                   ) : isSynced ? (
-                    <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-medium border border-emerald-500/20" title="Synced to Google Calendar">
+                    <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[0.625rem] font-medium border border-emerald-500/20" title="Synced to Google Calendar">
                       <CheckCircle className="w-3 h-3 text-emerald-400" />
                       <span>Synced</span>
                     </span>
                   ) : (
-                    <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 text-[10px] font-medium border border-amber-500/20" title="Awaiting Google Calendar Connection">
+                    <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 text-[0.625rem] font-medium border border-amber-500/20" title="Awaiting Google Calendar Connection">
                       <Calendar className="w-3 h-3 text-amber-400" />
                       <span>Awaiting Google Connection</span>
                     </span>
                   )}
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  <span className={`px-2.5 py-1 rounded-full text-[0.625rem] font-bold uppercase tracking-wider ${
                     isCompleted ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30' : 'bg-purple-950 text-purple-300 border border-purple-500/30'
                   }`}>
                     {isCompleted ? 'Completed' : `Due: ${emi.next_due_date}`}

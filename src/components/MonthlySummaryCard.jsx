@@ -44,18 +44,18 @@ export default function MonthlySummaryCard({ subscriptions, userEmis }) {
           <PieChart className="w-4 h-4 text-cyan-400" />
           <span>Monthly Summary</span>
         </h3>
-        <span className="text-[11px] text-slate-400">{monthName}</span>
+        <span className="text-[0.6875rem] text-slate-400">{monthName}</span>
       </div>
 
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Committed / month</p>
+          <p className="text-[0.6875rem] text-slate-400 uppercase tracking-wider font-semibold">Committed / month</p>
           <p className="text-3xl font-black text-white tracking-tight">{formatINR(total)}</p>
         </div>
         <div className="text-right">
-          <p className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Still to pay this month</p>
+          <p className="text-[0.6875rem] text-slate-400 uppercase tracking-wider font-semibold">Still to pay this month</p>
           <p className="text-lg font-extrabold text-amber-300">{formatINR(stillToPay)}</p>
-          <p className="text-[10px] text-slate-500">{daysLeftInMonth} days left</p>
+          <p className="text-[0.625rem] text-slate-500">{daysLeftInMonth} days left</p>
         </div>
       </div>
 
@@ -63,7 +63,7 @@ export default function MonthlySummaryCard({ subscriptions, userEmis }) {
         <div className="w-full h-2.5 rounded-full bg-purple-500/60 overflow-hidden">
           <div className="h-full bg-indigo-500" style={{ width: `${subPct}%` }} />
         </div>
-        <div className="flex justify-between text-[11px] mt-1.5">
+        <div className="flex justify-between text-[0.6875rem] mt-1.5">
           <span className="text-indigo-300 font-semibold">Subscriptions {formatINR(subTotal)}</span>
           <span className="text-purple-300 font-semibold">EMIs {formatINR(emiTotal)}</span>
         </div>
@@ -71,7 +71,7 @@ export default function MonthlySummaryCard({ subscriptions, userEmis }) {
 
       {top.length > 0 && (
         <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-2">
-          <p className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Biggest expenses</p>
+          <p className="text-[0.6875rem] text-slate-400 uppercase tracking-wider font-semibold">Biggest expenses</p>
           {top.map((i) => (
             <div key={`${i.kind}-${i.name}`} className="flex items-center justify-between text-xs">
               <span className="text-slate-200 font-medium truncate pr-2">
@@ -85,7 +85,7 @@ export default function MonthlySummaryCard({ subscriptions, userEmis }) {
 
       {dueThisMonth.length > 0 && (
         <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-2">
-          <p className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold flex items-center space-x-1">
+          <p className="text-[0.6875rem] text-slate-400 uppercase tracking-wider font-semibold flex items-center space-x-1">
             <Clock className="w-3 h-3" />
             <span>Coming up this month</span>
           </p>

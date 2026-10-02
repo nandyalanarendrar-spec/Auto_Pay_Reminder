@@ -22,7 +22,7 @@ export default function DashboardStats({ subscriptions, onToggleAiChat, onOpenSu
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-400 tracking-wider uppercase">ESTIMATED SPEND</p>
-            <p className="text-[11px] text-slate-500">Subscriptions · current monthly cycle</p>
+            <p className="text-[0.6875rem] text-slate-500">Subscriptions · current monthly cycle</p>
             <div className="flex items-baseline space-x-2 mt-2">
               <h3 className="text-4xl font-black text-white tracking-tight">₹{totalMonthlySpend.toFixed(0)}</h3>
               <ChevronRight className="w-5 h-5 text-slate-500" />

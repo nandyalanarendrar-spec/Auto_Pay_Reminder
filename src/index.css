@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Phones in "Desktop site" mode render a ~980px wide layout shrunk to fit, which makes everything tiny.
+   Scale rem-based sizes up for touch devices with a wide layout so text and icons stay readable. */
+@media (pointer: coarse) and (min-width: 900px) {
+  html {
+    font-size: 28px;
+  }
+}
+
 @layer base {
   body {
     @apply bg-[#080F1F] text-slate-100 font-sans antialiased min-h-screen overflow-x-hidden transition-colors duration-300;

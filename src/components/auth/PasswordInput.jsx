@@ -39,7 +39,7 @@ export default function PasswordInput({
 
   return (
     <div className="w-full space-y-1.5 text-left">
-      <label className="block text-[10px] font-extrabold tracking-wider text-[#A19DAE] uppercase">
+      <label className="block text-[0.625rem] font-extrabold tracking-wider text-[#A19DAE] uppercase">
         {label} {required && <span className="text-[#7C3AED]">*</span>}
       </label>
 
@@ -70,14 +70,14 @@ export default function PasswordInput({
 
       {showStrengthMeter && value && badge.text && (
         <div className="pt-0.5">
-          <p className={`text-[11px] font-bold ${badge.color}`}>
+          <p className={`text-[0.6875rem] font-bold ${badge.color}`}>
             {badge.text}
           </p>
         </div>
       )}
 
       {error && (
-        <p className="text-[11px] text-rose-400 font-medium pt-0.5 animate-fadeIn">
+        <p className="text-[0.6875rem] text-rose-400 font-medium pt-0.5 animate-fadeIn">
           {error}
         </p>
       )}

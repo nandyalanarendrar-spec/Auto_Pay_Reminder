@@ -129,7 +129,7 @@ export default function NotificationsCenterModal({
             <div>
               <h3 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2">
                 <span>Notification Center</span>
-                <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-500/40 rounded-full">
+                <span className="px-2 py-0.5 text-[0.625rem] font-bold bg-amber-950 text-amber-300 border border-amber-500/40 rounded-full">
                   {alerts.length} ALERTS
                 </span>
               </h3>
@@ -153,7 +153,7 @@ export default function NotificationsCenterModal({
               <Volume2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
               <div>
                 <span className="font-semibold block text-slate-200">Desktop Web Push</span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[0.6875rem] text-slate-400">
                   Status: {browserPermission === 'granted' ? '🟢 Allowed' : browserPermission === 'denied' ? '🔴 Blocked in Browser' : '🟡 Not Enabled'}
                 </span>
               </div>
@@ -179,7 +179,7 @@ export default function NotificationsCenterModal({
               <span className="text-base">📱</span>
               <div>
                 <span className="font-semibold block text-slate-200">Meta WhatsApp Cloud API</span>
-                <span className="text-[11px] text-emerald-400">🟢 Direct Integration Active</span>
+                <span className="text-[0.6875rem] text-emerald-400">🟢 Direct Integration Active</span>
               </div>
             </div>
 
@@ -236,7 +236,7 @@ export default function NotificationsCenterModal({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold truncate pr-2">{item.title}</h4>
-                  <span className="text-[10px] opacity-75 shrink-0 font-semibold">{item.time}</span>
+                  <span className="text-[0.625rem] opacity-75 shrink-0 font-semibold">{item.time}</span>
                 </div>
                 <p className="text-xs opacity-90 mt-1 leading-relaxed">{item.message}</p>
               </div>

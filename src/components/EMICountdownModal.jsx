@@ -96,7 +96,7 @@ export default function EMICountdownModal({
           </div>
         </div>
 
-        <span className="mt-2 text-[10px] font-bold tracking-widest text-purple-400 uppercase">
+        <span className="mt-2 text-[0.625rem] font-bold tracking-widest text-purple-400 uppercase">
           {label}
         </span>
       </div>
@@ -127,7 +127,7 @@ export default function EMICountdownModal({
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-lg font-bold text-white">{emi.loan_name}</h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                <span className={`px-2.5 py-0.5 rounded-full text-[0.625rem] font-bold uppercase tracking-wider ${
                   isCompleted ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30' : 'bg-purple-950 text-purple-300 border border-purple-500/30'
                 }`}>
                   {isCompleted ? 'Completed' : 'Active EMI Loan'}
@@ -186,17 +186,17 @@ export default function EMICountdownModal({
           {/* Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-slate-950/60 rounded-2xl p-4 border border-slate-800">
-              <span className="text-[11px] text-slate-400">Monthly Outflow</span>
+              <span className="text-[0.6875rem] text-slate-400">Monthly Outflow</span>
               <p className="text-lg font-bold text-white mt-1">₹{instAmt.toLocaleString()}<span className="text-xs text-slate-400 font-normal">/mo</span></p>
             </div>
 
             <div className="bg-slate-950/60 rounded-2xl p-4 border border-slate-800">
-              <span className="text-[11px] text-slate-400">Next Due Date</span>
+              <span className="text-[0.6875rem] text-slate-400">Next Due Date</span>
               <p className="text-lg font-bold text-purple-300 mt-1">{emi.next_due_date || 'N/A'}</p>
             </div>
 
             <div className="bg-slate-950/60 rounded-2xl p-4 border border-slate-800">
-              <span className="text-[11px] text-slate-400">Remaining Loan Balance</span>
+              <span className="text-[0.6875rem] text-slate-400">Remaining Loan Balance</span>
               <p className="text-lg font-bold text-amber-300 mt-1">₹{remAmt.toLocaleString()}</p>
             </div>
           </div>

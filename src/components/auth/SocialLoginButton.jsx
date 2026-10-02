@@ -7,7 +7,7 @@ export default function SocialLoginButton({ onGoogleClick }) {
       {/* Clean Divider Line */}
       <div className="relative flex items-center justify-center my-3">
         <div className="w-full border-t border-white/10"></div>
-        <span className="bg-[#151221] px-3 text-[10px] font-extrabold text-[#7F7990] tracking-widest uppercase absolute rounded-md">
+        <span className="bg-[#151221] px-3 text-[0.625rem] font-extrabold text-[#7F7990] tracking-widest uppercase absolute rounded-md">
           OR
         </span>
       </div>

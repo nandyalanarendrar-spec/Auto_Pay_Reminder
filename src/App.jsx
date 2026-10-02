@@ -10,6 +10,7 @@ import EmisPage from './components/EmisPage';
 import CalendarPage from './components/CalendarPage';
 import BottomNav from './components/BottomNav';
 import ChatFab from './components/ChatFab';
+import DesktopModeTip from './components/DesktopModeTip';
 import AddSubscriptionModal from './components/AddSubscriptionModal';
 import ReceiptVaultModal from './components/ReceiptVaultModal';
 import AIChatDrawer from './components/AIChatDrawer';
@@ -773,11 +774,13 @@ export default function App() {
       )}
 
       {/* Navigation Header */}
-      <Navbar />
+      <Navbar currentUser={currentUser} />
 
       {/* Main Content Area (extra bottom padding for the fixed bottom nav) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36">
         
+        <DesktopModeTip />
+
         {/* Emergency Kill-Switch Active Warning Banner */}
         {killSwitchActive && (
           <div className="mb-6 bg-rose-950/90 border-2 border-rose-500 rounded-2xl p-4 text-rose-200 flex items-center space-x-3 shadow-2xl animate-pulse">
@@ -799,7 +802,7 @@ export default function App() {
               <div>
                 <p className="font-bold text-sm text-white flex items-center space-x-2">
                   <span>Connect Google Calendar for Automatic Payment Date Sync</span>
-                  <span className="px-2 py-0.5 text-[10px] font-bold text-emerald-300 bg-emerald-950 rounded-full border border-emerald-500/40">1-Time Authorization</span>
+                  <span className="px-2 py-0.5 text-[0.625rem] font-bold text-emerald-300 bg-emerald-950 rounded-full border border-emerald-500/40">1-Time Authorization</span>
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">Authorize once so all subscription renewal dates and EMI due dates automatically sync to Google Calendar with zero manual "Save" buttons.</p>
               </div>
@@ -881,7 +884,7 @@ export default function App() {
             onBack={() => setActiveTab('dashboard')}
           />
         ) : (
-          <div className="max-w-2xl mx-auto space-y-6">
+          <div className="w-full space-y-6">
             <DashboardStats
               subscriptions={subscriptions}
               onToggleAiChat={() => setIsAiChatOpen(true)}

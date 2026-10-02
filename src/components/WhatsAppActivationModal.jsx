@@ -81,7 +81,7 @@ export default function WhatsAppActivationModal({
             <div>
               <h3 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2">
                 <span>Activate WhatsApp Alerts</span>
-                <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 rounded-full flex items-center space-x-1">
+                <span className="px-2 py-0.5 text-[0.625rem] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 rounded-full flex items-center space-x-1">
                   <Sparkles className="w-3 h-3 text-emerald-400" />
                   <span>Meta Verified</span>
                 </span>
@@ -124,7 +124,7 @@ export default function WhatsAppActivationModal({
                   onClose();
                   if (onOpenProfile) onOpenProfile();
                 }}
-                className="text-[11px] font-bold text-amber-400 hover:text-amber-300 flex items-center space-x-1 cursor-pointer"
+                className="text-[0.6875rem] font-bold text-amber-400 hover:text-amber-300 flex items-center space-x-1 cursor-pointer"
               >
                 <Edit3 className="w-3 h-3" />
                 <span>Edit Details</span>
@@ -156,7 +156,7 @@ export default function WhatsAppActivationModal({
                 placeholder="e.g. 15551380349"
                 className="flex-1 bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
               />
-              <span className="text-[10px] text-slate-500 font-semibold">Meta Cloud API</span>
+              <span className="text-[0.625rem] text-slate-500 font-semibold">Meta Cloud API</span>
             </div>
           </div>
 
@@ -174,7 +174,7 @@ export default function WhatsAppActivationModal({
               <span>📲 Send 'Hi' to WhatsApp Number</span>
               <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
             </button>
-            <p className="text-[11px] text-center text-slate-400">
+            <p className="text-[0.6875rem] text-center text-slate-400">
               Clicking will open WhatsApp chat with pre-filled message: <em className="text-emerald-400">"Hi AutoPay Guard activate alerts"</em>
             </p>
           </div>

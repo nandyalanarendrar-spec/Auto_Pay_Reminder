@@ -14,7 +14,7 @@ export default function InputField({
   return (
     <div className="w-full space-y-1.5 text-left">
       {label && (
-        <label className="block text-[10px] font-extrabold tracking-wider text-[#B8BECC] uppercase">
+        <label className="block text-[0.625rem] font-extrabold tracking-wider text-[#B8BECC] uppercase">
           {label} {required && <span className="text-[#ff007f]">*</span>}
         </label>
       )}
@@ -45,7 +45,7 @@ export default function InputField({
       </div>
 
       {error && (
-        <p className="text-[11px] text-rose-400 font-medium pt-0.5 animate-fadeIn">
+        <p className="text-[0.6875rem] text-rose-400 font-medium pt-0.5 animate-fadeIn">
           {error}
         </p>
       )}
