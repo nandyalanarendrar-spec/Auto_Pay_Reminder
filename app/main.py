@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routes import health, auth, subscriptions, emis, mock_generator, analytics, dashboard, integrations, notifications, chatbot, admin, ai, reports, whatsapp, personal_reminders
+from app.routes import health, auth, subscriptions, emis, mock_generator, analytics, dashboard, integrations, notifications, chatbot, admin, ai, reports, whatsapp, personal_reminders, bank
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -70,6 +70,31 @@ def startup_db_sanity_check():
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_calendar BOOLEAN DEFAULT true;"))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_whatsapp BOOLEAN DEFAULT true;"))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS is_important BOOLEAN DEFAULT false;"))
+                    # Bank data: transaction provenance + review list of detected payments
+                    conn.execute(text("ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'manual';"))
+                    conn.execute(text("ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS external_id TEXT;"))
+                    conn.execute(text("ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS account_ref TEXT;"))
+                    conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_transactions_user_external ON public.transactions(user_id, external_id);"))
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS public.detected_items (
+                            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                            user_id UUID NOT NULL,
+                            kind VARCHAR(20) NOT NULL,
+                            merchant_key VARCHAR(255) NOT NULL,
+                            merchant_name VARCHAR(255) NOT NULL,
+                            amount DECIMAL(12, 2) NOT NULL,
+                            billing_frequency VARCHAR(20) DEFAULT 'monthly',
+                            next_date DATE,
+                            confidence INTEGER DEFAULT 50,
+                            flags JSONB DEFAULT '[]'::jsonb,
+                            details JSONB DEFAULT '{}'::jsonb,
+                            status VARCHAR(20) DEFAULT 'pending',
+                            created_item_id TEXT,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                            UNIQUE (user_id, kind, merchant_key)
+                        );
+                    """))
                     conn.commit()
                     print("✅ PASS: Connected to Supabase PostgreSQL (All core tables & personal_reminders verified).")
         else:
@@ -116,6 +141,7 @@ app.include_router(ai.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(whatsapp.router, prefix="/api/v1")
 app.include_router(personal_reminders.router, prefix="/api/v1")
+app.include_router(bank.router, prefix="/api/v1")
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():

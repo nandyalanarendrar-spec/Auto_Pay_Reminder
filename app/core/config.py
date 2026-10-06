@@ -17,6 +17,12 @@ class Settings:
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:8000/api/v1/integrations/google-calendar/callback")
 
+    # Setu Account Aggregator (sandbox) - credentials come from the Bridge dashboard
+    SETU_CLIENT_ID: str = os.getenv("SETU_CLIENT_ID", "")
+    SETU_CLIENT_SECRET: str = os.getenv("SETU_CLIENT_SECRET", "")
+    SETU_PRODUCT_INSTANCE_ID: str = os.getenv("SETU_PRODUCT_INSTANCE_ID", "")
+    SETU_BASE_URL: str = os.getenv("SETU_BASE_URL", "")
+
     # WhatsApp Meta Cloud API Configuration
     WHATSAPP_PHONE_NUMBER_ID: str = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
     WHATSAPP_ACCESS_TOKEN: str = os.getenv("WHATSAPP_ACCESS_TOKEN", "")

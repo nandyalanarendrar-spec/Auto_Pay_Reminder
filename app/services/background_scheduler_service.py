@@ -46,6 +46,14 @@ def run_daily_rollover_sweep():
         reminder_res = FirebaseNotificationService.run_daily_payment_reminder_job()
         print(f"🔔 [Background Scheduler] Scanned upcoming payment reminders: {reminder_res.get('reminders_count', 0)} alerts sent.")
 
+        # 4. Top up demo bank data and refresh the review list for users who loaded the demo
+        try:
+            from app.services.demo_bank_service import DemoBankService
+            demo_res = DemoBankService.run_daily_for_all()
+            print(f"🏦 [Background Scheduler] Demo bank update: {demo_res}")
+        except Exception as demo_err:
+            print("Demo bank daily update error:", demo_err)
+
         return {
             "status": "success",
             "subscriptions_updated": len(rolled_subs),
