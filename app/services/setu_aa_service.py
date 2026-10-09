@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 import threading
 import time
 from typing import Any, Dict, Optional
@@ -9,6 +10,7 @@ import requests
 from app.core.config import settings
 
 TIMEOUT_SECONDS = 30
+USER_AGENT = "Mozilla/5.0 (compatible; AutopayGuard/1.0; +https://auto-pay-reminder.vercel.app)"
 
 
 class SetuError(Exception):
@@ -47,7 +49,11 @@ def _error_text(response: requests.Response) -> str:
         data = response.json()
         return str(data.get("errorMsg") or data.get("message") or data.get("errorCode") or data)[:300]
     except Exception:
-        return f"HTTP {response.status_code}"
+        # Not Setu's normal JSON error - usually a firewall/CDN page. Say who answered and what it said.
+        plain = re.sub(r"<[^>]+>", " ", response.text or "")
+        plain = re.sub(r"\s+", " ", plain).strip()[:140]
+        server = response.headers.get("server") or response.headers.get("via") or "unknown"
+        return f"HTTP {response.status_code} from {server}: {plain or 'empty response'}"
 
 
 def _get_token(force: bool = False) -> str:
@@ -62,7 +68,11 @@ def _get_token(force: bool = False) -> str:
                     "grant_type": "client_credentials",
                     "secret": _clean(settings.SETU_CLIENT_SECRET),
                 },
-                headers={"x-product-instance-id": _clean(settings.SETU_PRODUCT_INSTANCE_ID)},
+                headers={
+                    "x-product-instance-id": _clean(settings.SETU_PRODUCT_INSTANCE_ID),
+                    "User-Agent": USER_AGENT,
+                    "Accept": "application/json",
+                },
                 timeout=TIMEOUT_SECONDS,
             )
         except requests.RequestException as err:
@@ -84,6 +94,8 @@ def _request(method: str, path: str, body: Optional[dict] = None) -> Dict[str, A
             "Authorization": f"Bearer {_get_token(force=attempt == 2)}",
             "x-product-instance-id": _clean(settings.SETU_PRODUCT_INSTANCE_ID),
             "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": USER_AGENT,
         }
         try:
             res = requests.request(method, url, json=body, headers=headers, timeout=TIMEOUT_SECONDS)

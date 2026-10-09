@@ -209,3 +209,16 @@ def test_6_daily_job_skips_connections_synced_recently(user, fake_setu):
     finally:
         BankConnectionService.sync = original
         BankConnectionService.disconnect(user["id"])
+
+
+def test_error_text_explains_non_json_replies():
+    class FakeResponse:
+        status_code = 403
+        text = "<html><body><h1>Access denied</h1><p>Error 1010 browser signature banned</p></body></html>"
+        headers = {"server": "cloudflare"}
+
+        def json(self):
+            raise ValueError("not json")
+
+    message = setu_aa_service._error_text(FakeResponse())
+    assert "403" in message and "cloudflare" in message and "Access denied" in message and "<" not in message
