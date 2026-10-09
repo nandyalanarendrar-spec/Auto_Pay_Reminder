@@ -6,6 +6,7 @@ import HomeNavTiles from './components/HomeNavTiles';
 import MonthlySummaryCard from './components/MonthlySummaryCard';
 import BankDataCard from './components/BankDataCard';
 import ReviewPage from './components/ReviewPage';
+import SetuConnectCard from './components/SetuConnectCard';
 import TrialAlertBanner from './components/TrialAlertBanner';
 import SubscriptionsPage from './components/SubscriptionsPage';
 import EmisPage from './components/EmisPage';
@@ -270,9 +271,32 @@ export default function App() {
     }
   };
 
-  const handleBankDataChanged = async () => {
-    await Promise.all([fetchFromBackend(), refreshBankStatus()]);
+  // Setu (sandbox) bank connection state
+  const [setuStatus, setSetuStatus] = useState(null);
+  const autoSyncStartedRef = useRef(false);
+
+  const refreshSetuStatus = async () => {
+    try {
+      setSetuStatus(await apiRequest('/bank/setu/status'));
+    } catch (err) {
+      console.warn('Setu status unavailable:', err.message);
+    }
   };
+
+  const handleBankDataChanged = async () => {
+    await Promise.all([fetchFromBackend(), refreshBankStatus(), refreshSetuStatus()]);
+  };
+
+  // Right after the user approves on Setu's page and returns, import their transactions once.
+  useEffect(() => {
+    if (setuStatus?.state === 'active' && !setuStatus.last_synced_at && !autoSyncStartedRef.current) {
+      autoSyncStartedRef.current = true;
+      apiRequest('/bank/setu/sync', { method: 'POST' })
+        .then((r) => showToast(r?.pending ? `⏳ ${r.message}` : `🏦 Bank connected. ${r.fetched} debits read, ${r.pending_review} payments to review.`))
+        .catch((err) => showToast(`⚠️ ${err.message}`))
+        .finally(handleBankDataChanged);
+    }
+  }, [setuStatus]);
 
   const fetchedUserRef = useRef(null);
 
@@ -281,6 +305,7 @@ export default function App() {
       fetchedUserRef.current = currentUser.id;
       fetchFromBackend();
       refreshBankStatus();
+      refreshSetuStatus();
     }
   }, [currentUser]);
 
@@ -928,6 +953,12 @@ export default function App() {
               isEmpty={!isDataLoading && subscriptions.length === 0 && userEmis.length === 0}
               onAddManually={() => setIsAddModalOpen(true)}
               onOpenReview={() => setActiveTab('review')}
+              onChanged={handleBankDataChanged}
+              showToast={showToast}
+            />
+
+            <SetuConnectCard
+              status={setuStatus}
               onChanged={handleBankDataChanged}
               showToast={showToast}
             />

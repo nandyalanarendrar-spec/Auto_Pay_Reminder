@@ -54,6 +54,14 @@ def run_daily_rollover_sweep():
         except Exception as demo_err:
             print("Demo bank daily update error:", demo_err)
 
+        # 5. Fetch fresh transactions for users with an active Setu bank connection
+        try:
+            from app.services.bank_connection_service import BankConnectionService
+            setu_res = BankConnectionService.run_daily_for_all()
+            print(f"🏦 [Background Scheduler] Setu bank sync: {setu_res}")
+        except Exception as setu_err:
+            print("Setu daily sync error:", setu_err)
+
         return {
             "status": "success",
             "subscriptions_updated": len(rolled_subs),

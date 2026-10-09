@@ -95,6 +95,23 @@ def startup_db_sanity_check():
                             UNIQUE (user_id, kind, merchant_key)
                         );
                     """))
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS public.bank_consents (
+                            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                            user_id UUID NOT NULL,
+                            consent_id TEXT NOT NULL UNIQUE,
+                            status VARCHAR(30) DEFAULT 'PENDING',
+                            consent_url TEXT,
+                            phone_masked VARCHAR(20),
+                            accounts JSONB DEFAULT '[]'::jsonb,
+                            data_from TIMESTAMP WITH TIME ZONE,
+                            data_to TIMESTAMP WITH TIME ZONE,
+                            last_session_id TEXT,
+                            last_synced_at TIMESTAMP WITH TIME ZONE,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                        );
+                    """))
                     conn.commit()
                     print("✅ PASS: Connected to Supabase PostgreSQL (All core tables & personal_reminders verified).")
         else:

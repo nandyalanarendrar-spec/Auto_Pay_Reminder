@@ -1,15 +1,17 @@
 from datetime import date, datetime, timezone
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.core.security import get_current_user, get_supabase_client
 from app.schemas.emi import EMICreate
 from app.schemas.subscription import SubscriptionCreate
+from app.services.bank_connection_service import BankConnectionService
 from app.services.bank_detection_service import BankDetectionService
 from app.services.demo_bank_service import DemoBankService
 from app.services.emi_service import EMIService
+from app.services.setu_aa_service import SetuError
 from app.services.subscription_service import SubscriptionService
 from app.services.transaction_store import SOURCE_DEMO, TransactionStore, clean_user_id
 
@@ -163,3 +165,57 @@ def ignore_detected(item_id: str, current_user: dict = Depends(get_current_user)
     _load_pending(uid, item_id)
     _mark(item_id, "ignored")
     return {"status": "ignored"}
+
+
+# ---------------------------------------------------------------------------
+# Setu Account Aggregator (sandbox) connection
+# ---------------------------------------------------------------------------
+
+def _setu_http_error(err: SetuError) -> HTTPException:
+    code = err.status if err.status in (404, 409, 429, 503) else 502
+    return HTTPException(status_code=code, detail=str(err))
+
+
+class ConnectRequest(BaseModel):
+    mobile: str
+
+
+@router.post("/setu/connect", summary="Start linking a bank account through Setu (returns the approval link)")
+def setu_connect(body: ConnectRequest, current_user: dict = Depends(get_current_user)):
+    uid = _uid(current_user)
+    try:
+        return BankConnectionService.connect(uid, body.mobile)
+    except ValueError as err:
+        raise HTTPException(status_code=422, detail=str(err))
+    except SetuError as err:
+        raise _setu_http_error(err)
+
+
+@router.get("/setu/status", summary="Current Setu bank connection state")
+def setu_status(current_user: dict = Depends(get_current_user)):
+    return BankConnectionService.status(_uid(current_user))
+
+
+@router.post("/setu/sync", summary="Fetch the latest transactions from the connected bank and re-run detection")
+def setu_sync(current_user: dict = Depends(get_current_user)):
+    try:
+        return BankConnectionService.sync(_uid(current_user))
+    except SetuError as err:
+        if err.status == 202:
+            return {"pending": True, "message": str(err)}
+        raise _setu_http_error(err)
+
+
+@router.delete("/setu", summary="Disconnect the bank and delete its imported transactions")
+def setu_disconnect(current_user: dict = Depends(get_current_user)):
+    return BankConnectionService.disconnect(_uid(current_user))
+
+
+@router.post("/webhook", summary="Setu notification endpoint (public; payload is only a hint, status is re-read from Setu)")
+async def setu_webhook(request: Request, background: BackgroundTasks):
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    background.add_task(BankConnectionService.handle_webhook, payload)
+    return {"ok": True}

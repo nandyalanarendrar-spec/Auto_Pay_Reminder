@@ -22,6 +22,7 @@ class Settings:
     SETU_CLIENT_SECRET: str = os.getenv("SETU_CLIENT_SECRET", "")
     SETU_PRODUCT_INSTANCE_ID: str = os.getenv("SETU_PRODUCT_INSTANCE_ID", "")
     SETU_BASE_URL: str = os.getenv("SETU_BASE_URL", "")
+    SETU_AUTH_URL: str = os.getenv("SETU_AUTH_URL", "https://orgservice-prod.setu.co/v1/users/login")
 
     # WhatsApp Meta Cloud API Configuration
     WHATSAPP_PHONE_NUMBER_ID: str = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")

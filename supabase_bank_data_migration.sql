@@ -36,3 +36,26 @@ DO $$ BEGIN
     CREATE POLICY "Users access own detected items" ON public.detected_items FOR ALL USING (auth.uid() = user_id);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+-- 3. Bank connections made through Setu Account Aggregator (sandbox)
+CREATE TABLE IF NOT EXISTS public.bank_consents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    consent_id TEXT NOT NULL UNIQUE,
+    status VARCHAR(30) DEFAULT 'PENDING',
+    consent_url TEXT,
+    phone_masked VARCHAR(20),
+    accounts JSONB DEFAULT '[]'::jsonb,
+    data_from TIMESTAMP WITH TIME ZONE,
+    data_to TIMESTAMP WITH TIME ZONE,
+    last_session_id TEXT,
+    last_synced_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_bank_consents_user ON public.bank_consents(user_id);
+ALTER TABLE public.bank_consents ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+    CREATE POLICY "Users access own bank consents" ON public.bank_consents FOR ALL USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
