@@ -151,24 +151,6 @@ class SubscriptionService:
         except Exception as err:
             print("Supabase REST select error:", err)
 
-        # FAST PATH: If user already has subscriptions, skip the expensive mock-init check entirely.
-        # Only check mock_data_initialized when the query returned ZERO rows.
-        if not raw_subs:
-            from app.services.mock_generator_service import MockGeneratorService
-            if not MockGeneratorService.is_mock_data_initialized(clean_uid):
-                MockGeneratorService.ensure_one_time_mock_initialization(clean_uid)
-                try:
-                    query = supabase.from_("subscriptions").select("*").eq("user_id", clean_uid)
-                    if status:
-                        query = query.eq("status", status)
-                    if category:
-                        query = query.eq("category", category)
-                    res = query.execute()
-                    if res.data:
-                        raw_subs = res.data
-                except Exception as err:
-                    print("Supabase re-select after initialization error:", err)
-
         # Deduplicate subscriptions by merchant name (case-insensitive)
         unique_subs = []
         seen_merchants = set()

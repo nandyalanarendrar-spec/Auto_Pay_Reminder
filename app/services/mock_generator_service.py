@@ -204,16 +204,8 @@ class MockGeneratorService:
 
     @staticmethod
     def get_user_transactions(user_id: str) -> List[dict]:
-        clean_uid = str(user_id).strip('"\'')
-        supabase = get_supabase_client()
-        try:
-            res = supabase.from_("transactions").select("*").eq("user_id", clean_uid).order("transaction_date", desc=True).execute()
-            if res.data and len(res.data) > 0:
-                return res.data
-        except Exception as err:
-            print("Supabase REST transactions select error:", err)
-
-        return []
+        from app.services.transaction_store import TransactionStore
+        return TransactionStore.get_user_transactions(user_id)
 
     @staticmethod
     def is_mock_data_initialized(user_id: str) -> bool:

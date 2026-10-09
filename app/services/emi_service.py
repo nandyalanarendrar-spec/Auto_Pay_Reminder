@@ -134,18 +134,6 @@ class EMIService:
         except Exception as err:
             print("Supabase REST EMI select error:", err)
 
-        # FAST PATH: Only check mock init if no EMIs exist (skip 3 extra DB queries)
-        if not raw_emis:
-            from app.services.mock_generator_service import MockGeneratorService
-            if not MockGeneratorService.is_mock_data_initialized(clean_uid):
-                MockGeneratorService.ensure_one_time_mock_initialization(clean_uid)
-                try:
-                    res = supabase.from_("emis").select("*").eq("user_id", clean_uid).execute()
-                    if res.data:
-                        raw_emis = res.data
-                except Exception as err:
-                    print("Supabase REST EMI re-select after initialization error:", err)
-
         # Deduplicate by loan_name
         unique_emis = []
         seen_loans = set()

@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app.core.security import get_supabase_client
 from app.services.mock_generator_service import MockGeneratorService
 from app.services.subscription_service import SubscriptionService
+from app.services.emi_service import EMIService
 from app.services.calendar_agent_service import CalendarAgentService
 from app.services.google_calendar_service import GoogleCalendarService
 import pytest
@@ -56,17 +57,18 @@ def test_user():
 
 
 # ----------------------------------------------------------------------
-# TEST A: New user registers -> mock data generated exactly once
+# TEST A: New user registers -> starts empty (no automatic fake data)
 # ----------------------------------------------------------------------
-def test_a_new_user_registers_mock_data_generated_once(test_user):
+def test_a_new_user_starts_empty_without_auto_seeded_data(test_user):
     user_id = test_user["user_id"]
-    print(f"\n[Test A] Verifying one-time mock data initialization for user {user_id}...")
-    
-    # First fetch triggers initial mock seeding
+    print(f"\n[Test A] Verifying a new user is NOT seeded with fake data: {user_id}...")
+
     subs = SubscriptionService.get_user_subscriptions(user_id)
-    assert len(subs) > 0, "❌ Expected initial mock subscriptions to be seeded"
-    assert MockGeneratorService.is_mock_data_initialized(user_id) is True, "❌ is_mock_data_initialized must be True"
-    print(f"  ✅ Test A PASS: Generated {len(subs)} mock items and marked initialization flag.")
+    emis = EMIService.get_user_emis(user_id)
+    assert subs == [], "❌ New users must start with no subscriptions"
+    assert emis == [], "❌ New users must start with no EMIs"
+    assert MockGeneratorService.is_mock_data_initialized(user_id) is False, "❌ Nothing should be marked as seeded"
+    print("  ✅ Test A PASS: new user starts empty.")
 
 
 # ----------------------------------------------------------------------
@@ -89,21 +91,16 @@ def test_b_refresh_3x_no_duplicate_records(test_user):
 
 
 # ----------------------------------------------------------------------
-# TEST C: Logout + login again -> no new mock data generated
+# TEST C: Logout + login again -> still no fake data appears
 # ----------------------------------------------------------------------
 def test_c_logout_and_login_no_new_mock_data(test_user):
     user_id = test_user["user_id"]
     print(f"\n[Test C] Simulating user logout and subsequent re-login...")
-    
-    # Query before
+
     before_count = len(SubscriptionService.get_user_subscriptions(user_id))
-    
-    # Simulate fresh login state check
-    is_init = MockGeneratorService.is_mock_data_initialized(user_id)
-    assert is_init is True, "❌ Mock flag must persist across sessions"
-    
     after_subs = SubscriptionService.get_user_subscriptions(user_id)
     assert len(after_subs) == before_count, f"❌ Count changed after re-login: {before_count} -> {len(after_subs)}"
+    assert MockGeneratorService.is_mock_data_initialized(user_id) is False
     print(f"  ✅ Test C PASS: Re-login maintained steady subscription count ({before_count}).")
 
 
