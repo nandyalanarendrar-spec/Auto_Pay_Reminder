@@ -70,6 +70,15 @@ def startup_db_sanity_check():
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_calendar BOOLEAN DEFAULT true;"))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS sync_whatsapp BOOLEAN DEFAULT true;"))
                     conn.execute(text("ALTER TABLE public.personal_reminders ADD COLUMN IF NOT EXISTS is_important BOOLEAN DEFAULT false;"))
+                    # Without RLS anyone holding the public anon key could read every user's reminders.
+                    conn.execute(text("ALTER TABLE public.personal_reminders ENABLE ROW LEVEL SECURITY;"))
+                    conn.execute(text("""
+                        DO $$ BEGIN
+                            CREATE POLICY "Users access own personal reminders"
+                                ON public.personal_reminders FOR ALL USING (auth.uid() = user_id);
+                        EXCEPTION WHEN duplicate_object THEN NULL;
+                        END $$;
+                    """))
                     # Bank data: transaction provenance + review list of detected payments
                     conn.execute(text("ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'manual';"))
                     conn.execute(text("ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS external_id TEXT;"))
