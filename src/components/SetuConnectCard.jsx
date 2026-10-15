@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link2, Loader2, RefreshCw, Unplug, FlaskConical, ExternalLink, X, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 
@@ -109,6 +110,7 @@ export default function SetuConnectCard({ status, onChanged, showToast }) {
           </button>
         </div>
       ) : isPending ? (
+        <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <a
             href={status.consent_url}
@@ -127,6 +129,18 @@ export default function SetuConnectCard({ status, onChanged, showToast }) {
             <span>Cancel</span>
           </button>
         </div>
+        <button
+          disabled={!!busy}
+          onClick={() => run('check', async () => null, '🔄 Status refreshed.')}
+          className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-2xl bg-slate-900 border border-indigo-500/40 text-indigo-200 font-semibold text-xs cursor-pointer disabled:opacity-50"
+        >
+          {busy === 'check' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          <span>I have already approved - check status</span>
+        </button>
+        <p className="text-[0.6875rem] text-slate-500 leading-relaxed">
+          An approval link works only once. If it shows an error page, the bank was probably already approved - use the button above.
+        </p>
+        </div>
       ) : (
         <button
           onClick={() => setShowForm(true)}
@@ -138,9 +152,10 @@ export default function SetuConnectCard({ status, onChanged, showToast }) {
         </button>
       )}
 
-      {showForm && (
+      {/* Portalled to <body>: the glass card's backdrop-filter would otherwise trap this "fixed" overlay inside the card. */}
+      {showForm && createPortal(
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <form onSubmit={startConnect} className="w-full max-w-md rounded-3xl bg-slate-900 border border-slate-700 p-6 space-y-4 shadow-2xl">
+          <form onSubmit={startConnect} className="w-full max-w-md max-h-full overflow-y-auto rounded-3xl bg-slate-900 border border-slate-700 p-6 space-y-4 shadow-2xl">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -185,7 +200,8 @@ export default function SetuConnectCard({ status, onChanged, showToast }) {
               <span>Continue to Setu</span>
             </button>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -29,8 +29,30 @@ def get_supabase_client() -> Client:
     if _supabase_client is None:
         if create_client is None:
             return None
-        _supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        _supabase_client = _build_supabase_client()
     return _supabase_client
+
+
+def _build_supabase_client() -> Client:
+    """
+    supabase-py defaults to HTTP/2. Supabase closes idle HTTP/2 connections, and the first request
+    that reuses the dead connection fails with "ConnectionTerminated" (a 500 for the user, fine on
+    the next try). Plain HTTP/1.1 with a short keep-alive and connect retries avoids that.
+    """
+    try:
+        import httpx
+        from supabase import ClientOptions
+
+        http = httpx.Client(
+            http2=False,
+            timeout=httpx.Timeout(30.0, connect=10.0),
+            limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=20.0),
+            transport=httpx.HTTPTransport(retries=2),
+        )
+        return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY, options=ClientOptions(httpx_client=http))
+    except Exception as err:
+        print(f"Supabase client: falling back to default HTTP settings ({err.__class__.__name__}: {err})")
+        return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> dict:
     """
