@@ -49,7 +49,7 @@ const getAuthTokenForSync = async () => {
 };
 
 // Pages that show the big hero header with the tools row. All others use their own compact header.
-const HERO_TABS = ['dashboard', 'emis', 'reminders'];
+const HERO_TABS = ['dashboard', 'emis', 'reminders', 'calendar'];
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -838,7 +838,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Navigation Header: only on Home, EMIs and Reminders; every other page has its own back-arrow header */}
+      {/* Navigation Header: on Home, EMIs, Reminders and Calendar; the other pages have their own back-arrow header */}
       {HERO_TABS.includes(activeTab) && (
         <Navbar currentUser={currentUser} killSwitchActive={killSwitchActive}>
           <ToolsRow
