@@ -5,7 +5,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 # Append virtual environment site-packages to sys.path if not already present
-base_dir = os.path.dirname(os.path.abspath(__file__))
+# This script lives in scripts/, the project root (which holds app/) is one level up.
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
 venv_site_pkgs = os.path.join(base_dir, ".venv", "Lib", "site-packages")
 if os.path.exists(venv_site_pkgs) and venv_site_pkgs not in sys.path:
     sys.path.append(venv_site_pkgs)
