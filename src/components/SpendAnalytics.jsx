@@ -20,6 +20,19 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+// The five costliest live subscriptions, as a monthly amount so yearly and weekly plans compare fairly.
+export const topByCost = (subscriptions) =>
+  subscriptions
+    .filter((s) => s.status !== 'cancelled')
+    .map((s) => {
+      let amount = parseFloat(s.amount) || 0;
+      if (s.billing_cycle === 'yearly') amount = amount / 12;
+      if (s.billing_cycle === 'weekly') amount = amount * 4;
+      return { name: s.name || s.merchant_name || 'Subscription', amount: Math.round(amount * 100) / 100 };
+    })
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
+
 export default function SpendAnalytics({ subscriptions }) {
   // Aggregate spending by category
   const categoryDataMap = subscriptions.reduce((acc, sub) => {
@@ -101,10 +114,10 @@ export default function SpendAnalytics({ subscriptions }) {
         <div className="h-64 w-full">
           {subscriptions.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={subscriptions.slice(0, 5).map(s => ({ name: s.name, amount: parseFloat(s.amount) }))}>
+              <BarChart data={topByCost(subscriptions)}>
                 <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
                 <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
                 <Bar dataKey="amount" fill="#6366f1" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
