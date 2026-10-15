@@ -29,6 +29,10 @@ def user():
             supabase.from_(table).delete().eq("user_id", uid).execute()
         except Exception:
             pass
+    try:
+        __import__("_cleanup").delete_auth_user(uid)  # do not leave the throwaway account behind
+    except Exception:
+        pass
 
 
 def _pending(uid):

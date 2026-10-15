@@ -42,6 +42,10 @@ def test_user():
         supabase.from_("emis").delete().eq("user_id", user_id).execute()
     except Exception:
         pass
+    try:
+        __import__("_cleanup").delete_auth_user(user_id)  # do not leave the throwaway account behind
+    except Exception:
+        pass
 
 
 # ----------------------------------------------------------------------

@@ -9,7 +9,46 @@ from app.core.config import settings
 # 📱 META WHATSAPP CLOUD API INTEGRATION SERVICE
 # =====================================================================
 
+_phone_cache: Dict[str, Any] = {}
+_PHONE_CACHE_SECONDS = 600
+
+
 class WhatsAppService:
+
+    @staticmethod
+    def normalize_user_phone(raw: Any) -> Optional[str]:
+        """Digits with country code (a bare 10 digit Indian number gets 91), or None when it is not a usable number."""
+        digits = re.sub(r"\D", "", str(raw or ""))
+        if len(digits) == 10:
+            digits = "91" + digits
+        return digits if 11 <= len(digits) <= 15 else None
+
+    @staticmethod
+    def resolve_user_phone(user_id: Any) -> Optional[str]:
+        """
+        The signed-up user's OWN mobile number from their profile, or None.
+        Alerts must only ever go to the person they are about, so there is deliberately no shared test-number fallback.
+        """
+        import time
+
+        key = str(user_id or "").strip("\"'")
+        if not key:
+            return None
+        cached = _phone_cache.get(key)
+        if cached and time.time() - cached[1] < _PHONE_CACHE_SECONDS:
+            return cached[0]
+        phone = None
+        try:
+            from app.core.security import get_supabase_client
+
+            res = get_supabase_client().auth.admin.get_user_by_id(key)
+            meta = (res.user.user_metadata or {}) if res and getattr(res, "user", None) else {}
+            phone = WhatsAppService.normalize_user_phone(meta.get("phone_number") or meta.get("phone"))
+        except Exception as err:
+            print("WhatsApp phone lookup note:", err.__class__.__name__)
+            return None  # lookup problem: do not cache, try again next time
+        _phone_cache[key] = (phone, time.time())
+        return phone
 
     @staticmethod
     def _clean_phone_number(phone: str) -> str:

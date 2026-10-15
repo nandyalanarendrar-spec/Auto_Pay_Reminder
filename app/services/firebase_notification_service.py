@@ -410,24 +410,28 @@ class FirebaseNotificationService:
                 )
 
                 # 2. Dispatch Meta WhatsApp Cloud API Notification
-                target_wa_phone = getattr(settings, "WHATSAPP_TEST_RECIPIENT", "") or "919014220155"
-                wa_res = WhatsAppService.send_payment_reminder(
-                    to_phone=target_wa_phone,
-                    user_name=clean_uid,
-                    item_name=item["name"],
-                    amount=float(item["amount"]),
-                    due_date=str(item["next_due_date"]),
-                    days_left=item["days_remaining"],
-                    is_trial=bool(item.get("is_free_trial"))
-                )
+                # Only to the user's own registered number; no shared test-number fallback.
+                target_wa_phone = WhatsAppService.resolve_user_phone(clean_uid)
+                if target_wa_phone:
+                    wa_res = WhatsAppService.send_payment_reminder(
+                        to_phone=target_wa_phone,
+                        user_name=clean_uid,
+                        item_name=item["name"],
+                        amount=float(item["amount"]),
+                        due_date=str(item["next_due_date"]),
+                        days_left=item["days_remaining"],
+                        is_trial=bool(item.get("is_free_trial"))
+                    )
 
-                NotificationLogService.log_notification(
-                    user_id=clean_uid,
-                    entity_type=item["type"],
-                    entity_id=item["id"],
-                    notification_type=item["notification_type"],
-                    channel="whatsapp"
-                )
+                    NotificationLogService.log_notification(
+                        user_id=clean_uid,
+                        entity_type=item["type"],
+                        entity_id=item["id"],
+                        notification_type=item["notification_type"],
+                        channel="whatsapp"
+                    )
+                else:
+                    wa_res = {"status": "skipped", "message": "No registered mobile number for this user."}
 
                 notifications_sent.append({
                     "type": item["type"].upper(),

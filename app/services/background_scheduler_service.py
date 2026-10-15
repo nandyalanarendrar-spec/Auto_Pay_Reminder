@@ -164,8 +164,9 @@ def run_high_frequency_personal_reminders_sweep():
                         rem_id = str(rem.get("id"))
                         notif_type = "offset_60m_whatsapp"
 
-                        if not NotificationLogService.is_already_notified(user_id, "personal_reminder", rem_id, notif_type, today_iso):
-                            target_phone = getattr(settings, "WHATSAPP_TEST_RECIPIENT", "") or "919014220155"
+                        # Only the reminder owner's own number; users without one simply get no WhatsApp message.
+                        target_phone = WhatsAppService.resolve_user_phone(user_id)
+                        if target_phone and not NotificationLogService.is_already_notified(user_id, "personal_reminder", rem_id, notif_type, today_iso):
                             time_label = f"{rem_mins} minutes" if rem_mins < 60 else f"{rem_mins // 60} hour(s)"
                             wa_body = (
                                 f"⚡ *Autopay Guard Task Alert (1 Hour Reminder)*\n\n"
