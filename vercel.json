@@ -1,0 +1,6 @@
+{
+  "regions": ["bom1"],
+  "functions": {
+    "api/setu-relay.js": { "maxDuration": 30 }
+  }
+}

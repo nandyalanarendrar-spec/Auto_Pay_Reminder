@@ -222,3 +222,56 @@ def test_error_text_explains_non_json_replies():
 
     message = setu_aa_service._error_text(FakeResponse())
     assert "403" in message and "cloudflare" in message and "Access denied" in message and "<" not in message
+
+
+# --------------------------------------------------------------------------- relay (Setu blocks the backend host)
+
+def test_calls_go_straight_to_setu_when_no_relay_is_set(monkeypatch):
+    monkeypatch.setattr(setu_aa_service.settings, "SETU_RELAY_URL", "")
+    seen = {}
+
+    def fake_request(method, url, json=None, headers=None, timeout=None):
+        seen.update(method=method, url=url, json=json)
+        return "direct-response"
+
+    monkeypatch.setattr(setu_aa_service.requests, "request", fake_request)
+    assert setu_aa_service._send("GET", "https://fiu-sandbox.setu.co/v2/consents/x", {"a": "b"}) == "direct-response"
+    assert seen["url"].startswith("https://fiu-sandbox.setu.co/")
+
+
+def test_relay_forwards_request_and_rebuilds_the_response(monkeypatch):
+    monkeypatch.setattr(setu_aa_service.settings, "SETU_RELAY_URL", "https://site.example/api/setu-relay")
+    monkeypatch.setattr(setu_aa_service.settings, "SETU_RELAY_KEY", "  shared-key \n")
+    seen = {}
+
+    class RelayReply:
+        status_code = 200
+
+        def json(self):
+            return {"status": 400, "content_type": "application/json", "server": "setu",
+                    "body": '{"errorMsg":"Consent use exceeded"}'}
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        seen.update(url=url, json=json, headers=headers)
+        return RelayReply()
+
+    monkeypatch.setattr(setu_aa_service.requests, "post", fake_post)
+    res = setu_aa_service._send("POST", "https://fiu-sandbox.setu.co/v2/sessions", {"Authorization": "Bearer t"}, {"consentId": "c"})
+
+    assert seen["url"] == "https://site.example/api/setu-relay"
+    assert seen["headers"]["x-relay-key"] == "shared-key", "key must be trimmed"
+    assert seen["json"]["url"] == "https://fiu-sandbox.setu.co/v2/sessions" and seen["json"]["body"] == {"consentId": "c"}
+    assert res.status_code == 400 and not res.ok and res.json()["errorMsg"] == "Consent use exceeded"
+    assert setu_aa_service._error_text(res) == "Consent use exceeded"
+
+
+def test_relay_rejection_is_reported_clearly(monkeypatch):
+    monkeypatch.setattr(setu_aa_service.settings, "SETU_RELAY_URL", "https://site.example/api/setu-relay")
+
+    class Rejected:
+        status_code = 401
+
+    monkeypatch.setattr(setu_aa_service.requests, "post", lambda *a, **k: Rejected())
+    with pytest.raises(SetuError) as err:
+        setu_aa_service._send("GET", "https://fiu-sandbox.setu.co/v2/consents/x", {})
+    assert err.value.status == 502 and "SETU_RELAY_KEY" in str(err.value)

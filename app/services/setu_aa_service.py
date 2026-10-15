@@ -56,24 +56,61 @@ def _error_text(response: requests.Response) -> str:
         return f"HTTP {response.status_code} from {server}: {plain or 'empty response'}"
 
 
+class _RelayResponse:
+    """The parts of requests.Response this module uses, rebuilt from the relay's JSON reply."""
+
+    def __init__(self, data: Dict[str, Any]):
+        self.status_code = int(data.get("status") or 0)
+        self.text = data.get("body") or ""
+        self.headers = {"server": data.get("server") or "", "content-type": data.get("content_type") or ""}
+
+    @property
+    def ok(self) -> bool:
+        return 200 <= self.status_code < 400
+
+    def json(self) -> Any:
+        return json.loads(self.text)
+
+
+def _send(method: str, url: str, headers: Dict[str, str], body: Optional[dict] = None):
+    """Call Setu directly, or through the Indian-region relay when SETU_RELAY_URL is set."""
+    relay_url = _clean(settings.SETU_RELAY_URL)
+    if not relay_url:
+        return requests.request(method, url, json=body, headers=headers, timeout=TIMEOUT_SECONDS)
+
+    res = requests.post(
+        relay_url,
+        json={"method": method, "url": url, "headers": headers, "body": body},
+        headers={"x-relay-key": _clean(settings.SETU_RELAY_KEY), "Content-Type": "application/json"},
+        timeout=TIMEOUT_SECONDS + 5,
+    )
+    if res.status_code != 200:
+        raise SetuError(f"Setu relay refused the request (HTTP {res.status_code}). Check SETU_RELAY_URL / SETU_RELAY_KEY.", 502)
+    try:
+        return _RelayResponse(res.json())
+    except ValueError:
+        raise SetuError("Setu relay returned an unreadable reply.", 502)
+
+
 def _get_token(force: bool = False) -> str:
     with _token_lock:
         if not force and _token_cache["value"] and _token_cache["expires_at"] - 60 > time.time():
             return _token_cache["value"]
         try:
-            res = requests.post(
+            res = _send(
+                "POST",
                 _clean(settings.SETU_AUTH_URL),
-                json={
+                {
+                    "x-product-instance-id": _clean(settings.SETU_PRODUCT_INSTANCE_ID),
+                    "User-Agent": USER_AGENT,
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+                {
                     "clientID": _clean(settings.SETU_CLIENT_ID),
                     "grant_type": "client_credentials",
                     "secret": _clean(settings.SETU_CLIENT_SECRET),
                 },
-                headers={
-                    "x-product-instance-id": _clean(settings.SETU_PRODUCT_INSTANCE_ID),
-                    "User-Agent": USER_AGENT,
-                    "Accept": "application/json",
-                },
-                timeout=TIMEOUT_SECONDS,
             )
         except requests.RequestException as err:
             raise SetuError(f"Could not reach Setu to sign in: {err.__class__.__name__}")
@@ -98,7 +135,7 @@ def _request(method: str, path: str, body: Optional[dict] = None) -> Dict[str, A
             "User-Agent": USER_AGENT,
         }
         try:
-            res = requests.request(method, url, json=body, headers=headers, timeout=TIMEOUT_SECONDS)
+            res = _send(method, url, headers, body)
         except requests.RequestException as err:
             raise SetuError(f"Could not reach Setu: {err.__class__.__name__}")
         if res.status_code == 401 and attempt == 1:

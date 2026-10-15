@@ -23,6 +23,9 @@ class Settings:
     SETU_PRODUCT_INSTANCE_ID: str = os.getenv("SETU_PRODUCT_INSTANCE_ID", "")
     SETU_BASE_URL: str = os.getenv("SETU_BASE_URL", "")
     SETU_AUTH_URL: str = os.getenv("SETU_AUTH_URL", "https://orgservice-prod.setu.co/v1/users/login")
+    # Optional: send Setu calls through a relay hosted in India (Setu blocks the backend host's addresses).
+    SETU_RELAY_URL: str = os.getenv("SETU_RELAY_URL", "")
+    SETU_RELAY_KEY: str = os.getenv("SETU_RELAY_KEY", "")
 
     # WhatsApp Meta Cloud API Configuration
     WHATSAPP_PHONE_NUMBER_ID: str = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
