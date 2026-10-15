@@ -263,9 +263,25 @@ export default function App() {
   // Bank data: demo status and how many detected payments wait for review
   const [bankStatus, setBankStatus] = useState(null);
 
+  // The first call after the backend has been idle can fail once (cold start / dropped connection);
+  // without a retry the bank cards stay hidden until the user refreshes the page a few times.
+  const fetchStatusWithRetry = async (path) => {
+    const waits = [0, 1500, 4000];
+    let lastError;
+    for (const wait of waits) {
+      if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+      try {
+        return await apiRequest(path);
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError;
+  };
+
   const refreshBankStatus = async () => {
     try {
-      setBankStatus(await apiRequest('/bank/status'));
+      setBankStatus(await fetchStatusWithRetry('/bank/status'));
     } catch (err) {
       console.warn('Bank status unavailable:', err.message);
     }
@@ -277,7 +293,7 @@ export default function App() {
 
   const refreshSetuStatus = async () => {
     try {
-      setSetuStatus(await apiRequest('/bank/setu/status'));
+      setSetuStatus(await fetchStatusWithRetry('/bank/setu/status'));
     } catch (err) {
       console.warn('Setu status unavailable:', err.message);
     }
