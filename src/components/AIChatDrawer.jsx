@@ -257,7 +257,8 @@ export default function AIChatDrawer({ isOpen, onClose, subscriptions }) {
       {/* Drawer Panel */}
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 50,
-        width: '100%', maxWidth: 420,
+        // Wider than before: reaches further to the left on phones and desktops.
+        width: '100%', maxWidth: 'min(94vw, 760px)',
         display: 'flex', flexDirection: 'column',
         background: 'linear-gradient(180deg, #0c1225 0%, #080f1f 40%, #0a0e1f 100%)',
         borderLeft: '1px solid rgba(139,92,246,0.12)',

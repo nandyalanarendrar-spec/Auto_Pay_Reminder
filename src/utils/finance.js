@@ -56,3 +56,14 @@ export const notifTypeForDays = (days) => {
 };
 
 export const formatINR = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+
+// Headline numbers for the subscriptions list and the analysis page, so both always agree.
+export const summarizeSubscriptions = (subscriptions) => {
+  const active = subscriptions.filter((s) => s.status === 'active' || s.status === 'trial');
+  const monthly = subscriptions.filter(isSubCounted).reduce((a, s) => a + toMonthlyAmount(s), 0);
+  const dueSoon = active.filter((s) => {
+    const d = getDaysUntil(subRenewalDate(s));
+    return d >= 0 && d <= 7;
+  }).length;
+  return { activeCount: active.length, monthly, dueSoon };
+};
