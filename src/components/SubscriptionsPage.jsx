@@ -1,24 +1,10 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Plus, Repeat, BarChart3, ChevronDown } from 'lucide-react';
+import React from 'react';
+import { ArrowLeft, Plus, Repeat, BarChart3, ChevronRight } from 'lucide-react';
 import SubscriptionList from './SubscriptionList';
-import SpendAnalytics from './SpendAnalytics';
-import {
-  getDaysUntil,
-  toMonthlyAmount,
-  subRenewalDate,
-  isSubCounted,
-  formatINR
-} from '../utils/finance';
+import { summarizeSubscriptions, formatINR } from '../utils/finance';
 
-export default function SubscriptionsPage({ subscriptions, onBack, onOpenAddModal, ...listHandlers }) {
-  const [showCharts, setShowCharts] = useState(false);
-
-  const active = subscriptions.filter((s) => s.status === 'active' || s.status === 'trial');
-  const monthly = subscriptions.filter(isSubCounted).reduce((a, s) => a + toMonthlyAmount(s), 0);
-  const dueSoon = active.filter((s) => {
-    const d = getDaysUntil(subRenewalDate(s));
-    return d >= 0 && d <= 7;
-  }).length;
+export default function SubscriptionsPage({ subscriptions, onBack, onOpenAddModal, onOpenAnalysis, ...listHandlers }) {
+  const { activeCount, monthly, dueSoon } = summarizeSubscriptions(subscriptions);
 
   return (
     <div className="space-y-6">
@@ -52,34 +38,27 @@ export default function SubscriptionsPage({ subscriptions, onBack, onOpenAddModa
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Active', value: active.length },
-          { label: 'Per month', value: formatINR(monthly) },
-          { label: 'Due in 7 days', value: dueSoon, warn: dueSoon > 0 }
-        ].map((c) => (
-          <div key={c.label} className="glass-card-dark rounded-2xl p-3 sm:p-4 border border-white/10 text-center">
-            <p className={`text-lg sm:text-2xl font-black ${c.warn ? 'text-amber-300' : 'text-white'}`}>{c.value}</p>
-            <p className="text-[0.625rem] sm:text-[0.6875rem] text-slate-400 uppercase tracking-wider font-semibold mt-0.5">{c.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div>
+      {/* The numbers and charts live on their own page; this button is the way in. */}
+      {onOpenAnalysis && (
         <button
-          onClick={() => setShowCharts(!showCharts)}
-          className="flex items-center space-x-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer"
+          onClick={onOpenAnalysis}
+          className="w-full flex items-center justify-between gap-3 rounded-2xl p-4 border border-indigo-500/40 bg-gradient-to-r from-indigo-950/60 to-slate-900 hover:border-indigo-400 transition-all cursor-pointer group"
         >
-          <BarChart3 className="w-4 h-4 text-indigo-400" />
-          <span>{showCharts ? 'Hide spending charts' : 'Show spending charts'}</span>
-          <ChevronDown className={`w-4 h-4 transition-transform ${showCharts ? 'rotate-180' : ''}`} />
-        </button>
-        {showCharts && (
-          <div className="mt-4">
-            <SpendAnalytics subscriptions={subscriptions} />
+          <div className="flex items-center space-x-3 text-left min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center flex-shrink-0">
+              <BarChart3 className="w-5 h-5 text-indigo-300" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white">Dashboard &amp; spending analysis</p>
+              <p className="text-[0.6875rem] text-indigo-200/80 truncate">
+                {activeCount} active · {formatINR(monthly)}/month
+                {dueSoon > 0 ? ` · ${dueSoon} due in 7 days` : ''}
+              </p>
+            </div>
           </div>
-        )}
-      </div>
+          <ChevronRight className="w-5 h-5 text-indigo-300 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+        </button>
+      )}
 
       <SubscriptionList subscriptions={subscriptions} {...listHandlers} />
     </div>

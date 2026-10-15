@@ -7,6 +7,7 @@ import MonthlySummaryCard from './components/MonthlySummaryCard';
 import BankDataCard from './components/BankDataCard';
 import ReviewPage from './components/ReviewPage';
 import SpendingPage from './components/SpendingPage';
+import SubscriptionAnalysisPage from './components/SubscriptionAnalysisPage';
 import InsightAlertsBanner from './components/InsightAlertsBanner';
 import SetuConnectCard from './components/SetuConnectCard';
 import TrialAlertBanner from './components/TrialAlertBanner';
@@ -46,6 +47,9 @@ const getAuthTokenForSync = async () => {
   } catch (e) {}
   return null;
 };
+
+// Pages that show the big hero header with the tools row. All others use their own compact header.
+const HERO_TABS = ['dashboard', 'emis', 'reminders'];
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -834,21 +838,23 @@ export default function App() {
         </div>
       )}
 
-      {/* Navigation Header */}
-      <Navbar currentUser={currentUser} killSwitchActive={killSwitchActive}>
-        <ToolsRow
-          currentUser={currentUser}
-          onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
-          onEnableNotifications={handleEnableNotifications}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
-          canInstallPwa={!!deferredInstallPrompt}
-          onInstallPwa={handleInstallPwa}
-          onToggleKillSwitch={handleToggleKillSwitch}
-          killSwitchActive={killSwitchActive}
-          onOpenWhatIf={() => setIsWhatIfOpen(true)}
-        />
-      </Navbar>
+      {/* Navigation Header: only on Home, EMIs and Reminders; every other page has its own back-arrow header */}
+      {HERO_TABS.includes(activeTab) && (
+        <Navbar currentUser={currentUser} killSwitchActive={killSwitchActive}>
+          <ToolsRow
+            currentUser={currentUser}
+            onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
+            onEnableNotifications={handleEnableNotifications}
+            theme={theme}
+            onToggleTheme={handleToggleTheme}
+            canInstallPwa={!!deferredInstallPrompt}
+            onInstallPwa={handleInstallPwa}
+            onToggleKillSwitch={handleToggleKillSwitch}
+            killSwitchActive={killSwitchActive}
+            onOpenWhatIf={() => setIsWhatIfOpen(true)}
+          />
+        </Navbar>
+      )}
 
       {/* Main Content Area (extra bottom padding for the fixed bottom nav) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36">
@@ -940,6 +946,12 @@ export default function App() {
             onRetrySync={handleRetrySync}
             onMarkPaid={handleMarkSubPaid}
             onSnoozeAlert={handleSnoozeSubAlert}
+            onOpenAnalysis={() => setActiveTab('analysis')}
+          />
+        ) : activeTab === 'analysis' ? (
+          <SubscriptionAnalysisPage
+            subscriptions={subscriptions}
+            onBack={() => setActiveTab('subscriptions')}
           />
         ) : activeTab === 'emis' ? (
           <EmisPage
@@ -1100,7 +1112,7 @@ export default function App() {
       </button>
 
       <BottomNav
-        activeTab={activeTab}
+        activeTab={activeTab === 'analysis' ? 'subscriptions' : activeTab}
         onSelectTab={(tab) => setActiveTab(tab)}
         currentUser={currentUser}
         onOpenProfile={() => setIsProfileModalOpen(true)}
