@@ -41,7 +41,7 @@ def startup_db_sanity_check():
                 
                 if missing:
                     print(f"⚠️ WARNING: Missing database tables in Supabase public schema: {missing}")
-                    print("Run 'supabase_schema.sql' in Supabase SQL Editor to restore missing tables.")
+                    print("Run 'db/supabase_schema.sql' in Supabase SQL Editor to restore missing tables.")
                 else:
                     conn.execute(text("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_start_date DATE;"))
                     conn.execute(text("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_end_date DATE;"))

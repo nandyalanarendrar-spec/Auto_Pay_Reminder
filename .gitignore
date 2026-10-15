@@ -25,7 +25,6 @@ Thumbs.db
 # Temp Scratch, Debug & Test scripts (dev-only, not production code)
 scratch/
 scripts/
-tests/
 
 # Runtime data files (auto-generated at runtime)
 audit_logs.json
