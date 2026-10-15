@@ -12,6 +12,7 @@ from app.services.safety_score_service import SafetyScoreService
 from app.services.prediction_service import PredictionService
 from app.services.chatbot_service import ChatbotService
 from app.services.mock_generator_service import MockGeneratorService
+from app.services.spending_insights_service import SpendingInsightsService
 
 # =====================================================================
 # 🤖 MULTI-AGENT ORCHESTRATION ENGINE WITH LIVE DATABASE INGESTION
@@ -140,6 +141,64 @@ class EMISpecialistAgent:
         return "\n".join(lines)
 
 
+class SpendingTransactionsAgent:
+    """Answers "how much did I spend ..." questions from the user's real stored transactions (no model, no guessing)."""
+
+    SPEND_WORDS = ["spend", "spent", "spending", "expense", "expenses", "kharcha", "kharchu", "where did my money",
+                   "top merchant", "biggest", "most money", "ఖర్చు", "transactions", "outgoing"]
+    THIS_MONTH = ["this month", "current month", "ఈ నెల", "ee nela"]
+    LAST_MONTH = ["last month", "previous month", "గత నెల", "gatha nela"]
+    TOP_WORDS = ["top", "biggest", "most", "where", "which merchant", "ఎక్కడ"]
+
+    @staticmethod
+    def process(message: str, summary: Dict[str, Any]) -> Optional[str]:
+        msg = (message or "").lower()
+        if not any(w in msg for w in SpendingTransactionsAgent.SPEND_WORDS):
+            return None
+        # Plan-level questions ("my subscriptions", "my EMIs") belong to the other agents.
+        if any(w in msg for w in ("subscription", "emi", "loan", "renew")) and "transaction" not in msg:
+            return None
+
+        if not summary.get("has_data"):
+            return ("I do not see any transactions yet. Connect your bank (sandbox) or load the demo bank data on the "
+                    "home screen and I can tell you exactly where your money goes.")
+
+        this_m, last_m = summary["this_month"], summary["last_month"]
+        change = summary.get("change_pct")
+        change_line = ""
+        if change is not None:
+            direction = "more" if change > 0 else "less"
+            change_line = f" That is {abs(change):.1f}% {direction} than last month."
+
+        asks_last = any(w in msg for w in SpendingTransactionsAgent.LAST_MONTH)
+        asks_this = any(w in msg for w in SpendingTransactionsAgent.THIS_MONTH)
+        asks_top = any(w in msg for w in SpendingTransactionsAgent.TOP_WORDS)
+
+        if asks_last and not asks_this:
+            return (f"📊 In **{last_m['label']}** you spent **₹{last_m['total']:,.2f}** across "
+                    f"{last_m['count']} payments.")
+
+        parts = []
+        if asks_this or not asks_top:
+            parts.append(f"📊 So far in **{this_m['label']}** you have spent **₹{this_m['total']:,.2f}** across "
+                         f"{this_m['count']} payments.{change_line}")
+        if not asks_this and not asks_top:
+            parts.append(f"Last month ({last_m['label']}) was ₹{last_m['total']:,.2f}.")
+        if summary.get("average_monthly") and not (asks_top and not asks_this):
+            parts.append(f"Your average for completed months is ₹{summary['average_monthly']:,.2f}.")
+        if asks_top and not asks_this:
+            parts.append(f"📊 Here is where your money went over the last {summary['window_months']} months "
+                         f"(₹{summary['total_spent']:,.2f} in total):")
+        if asks_top or not asks_this:
+            tops = summary.get("top_merchants", [])[:5]
+            if tops:
+                lines = [f"{i + 1}. **{m['name']}**: ₹{m['total']:,.2f} ({m['share_pct']:.0f}%, {m['count']} payments)"
+                         for i, m in enumerate(tops)]
+                header = "" if (asks_top and not asks_this) else f"Where it went over the last {summary['window_months']} months:\n"
+                parts.append(header + "\n".join(lines))
+        return "\n\n".join(parts)
+
+
 class SpendAdvisoryAgent:
     """Specialized Agent for Live Spend Analytics, Counts, AI Tool Consolidation & Safety Risk."""
 
@@ -222,6 +281,14 @@ class AIService:
         monthly_subs = sum(float(s.get("amount", 0)) for s in subs)
         monthly_emis = sum(float(e.get("installment_amount") or e.get("monthly_installment", 0)) for e in emis)
 
+        # Real stored transactions (manual + demo + bank import) so spending questions are answered from facts.
+        try:
+            spending = SpendingInsightsService.build(clean_uid)
+        except Exception as e:
+            print("Error building spending summary for AI Service:", e)
+            spending = {"has_data": False}
+        spending_text = SpendingInsightsService.describe(spending)
+
         context_summary = {
             "monthly_subscriptions_total": round(monthly_subs, 2),
             "monthly_emis_total": round(monthly_emis, 2),
@@ -229,7 +296,9 @@ class AIService:
             "active_subscriptions_count": len(subs),
             "active_emis_count": len(emis),
             "safety_score": safety_score,
-            "status_grade": status_grade
+            "status_grade": status_grade,
+            "spent_this_month": (spending.get("this_month") or {}).get("total", 0),
+            "spent_last_month": (spending.get("last_month") or {}).get("total", 0),
         }
 
         # 2. MULTI-AGENT ORCHESTRATION ROUTING
@@ -262,6 +331,16 @@ class AIService:
                 "response": emi_res,
                 "context_summary": context_summary,
                 "suggested_actions": ["Pay Installment", "Check Loan Progress"]
+            }
+
+        # Route 3b: Transactions Agent (handles "how much did I spend this month / where did my money go")
+        spend_res = SpendingTransactionsAgent.process(message, spending)
+        if spend_res:
+            return {
+                "query": message,
+                "response": spend_res,
+                "context_summary": context_summary,
+                "suggested_actions": ["Open Spending Dashboard", "Review Detected Payments"]
             }
 
         # Route 4: Spend Advisory Agent & Gemini LLM Generation
@@ -300,6 +379,9 @@ Active Subscriptions & Free Trials ({len(subs)} Total):
 
 Active EMI Loans ({len(emis)} Total):
 {emis_text}
+
+Real bank/card transactions (stored records, use these for any spending question):
+{spending_text}
 
 Summary:
 - Total Monthly Subscriptions: ₹{monthly_subs:,.2f}

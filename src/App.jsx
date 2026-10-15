@@ -6,6 +6,8 @@ import HomeNavTiles from './components/HomeNavTiles';
 import MonthlySummaryCard from './components/MonthlySummaryCard';
 import BankDataCard from './components/BankDataCard';
 import ReviewPage from './components/ReviewPage';
+import SpendingPage from './components/SpendingPage';
+import InsightAlertsBanner from './components/InsightAlertsBanner';
 import SetuConnectCard from './components/SetuConnectCard';
 import TrialAlertBanner from './components/TrialAlertBanner';
 import SubscriptionsPage from './components/SubscriptionsPage';
@@ -299,8 +301,20 @@ export default function App() {
     }
   };
 
+  // Price hikes and trials that turned paid, found in the user's bank data
+  const [insightAlerts, setInsightAlerts] = useState([]);
+
+  const refreshInsightAlerts = async () => {
+    try {
+      const res = await apiRequest('/bank/alerts');
+      setInsightAlerts(res?.alerts || []);
+    } catch (err) {
+      console.warn('Insight alerts unavailable:', err.message);
+    }
+  };
+
   const handleBankDataChanged = async () => {
-    await Promise.all([fetchFromBackend(), refreshBankStatus(), refreshSetuStatus()]);
+    await Promise.all([fetchFromBackend(), refreshBankStatus(), refreshSetuStatus(), refreshInsightAlerts()]);
   };
 
   // Right after the user approves on Setu's page and returns, import their transactions once.
@@ -322,6 +336,7 @@ export default function App() {
       fetchFromBackend();
       refreshBankStatus();
       refreshSetuStatus();
+      refreshInsightAlerts();
     }
   }, [currentUser]);
 
@@ -942,6 +957,11 @@ export default function App() {
             onChanged={handleBankDataChanged}
             showToast={showToast}
           />
+        ) : activeTab === 'spending' ? (
+          <SpendingPage
+            onBack={() => setActiveTab('dashboard')}
+            onOpenReview={() => setActiveTab('review')}
+          />
         ) : activeTab === 'calendar' ? (
           <CalendarPage
             subscriptions={subscriptions}
@@ -958,6 +978,8 @@ export default function App() {
 
             <TrialAlertBanner subscriptions={subscriptions} onNavigate={setActiveTab} />
 
+            <InsightAlertsBanner alerts={insightAlerts} onOpenReview={() => setActiveTab('review')} />
+
             <HomeNavTiles
               subscriptions={subscriptions}
               userEmis={userEmis}
@@ -969,6 +991,7 @@ export default function App() {
               isEmpty={!isDataLoading && subscriptions.length === 0 && userEmis.length === 0}
               onAddManually={() => setIsAddModalOpen(true)}
               onOpenReview={() => setActiveTab('review')}
+              onOpenSpending={() => setActiveTab('spending')}
               onChanged={handleBankDataChanged}
               showToast={showToast}
             />

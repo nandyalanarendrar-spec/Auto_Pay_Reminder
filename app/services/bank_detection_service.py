@@ -327,4 +327,8 @@ class BankDetectionService:
             supabase.from_("detected_items").delete().in_("id", stale).execute()
 
         pending = supabase.from_("detected_items").select("id", count="exact").eq("user_id", uid).eq("status", "pending").limit(1).execute()
+
+        # Tell the user right away about price hikes and trials that turned paid (sent once per item).
+        from app.services.insight_alert_service import InsightAlertService
+        InsightAlertService.notify_new(uid)
         return {"pending": pending.count or 0, "new": new_count}

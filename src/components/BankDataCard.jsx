@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Landmark, Sparkles, Trash2, ChevronRight, Loader2, PlusCircle, FlaskConical } from 'lucide-react';
+import { Landmark, Sparkles, Trash2, ChevronRight, Loader2, PlusCircle, FlaskConical, BarChart3 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 
-export default function BankDataCard({ status, isEmpty, onAddManually, onOpenReview, onChanged, showToast }) {
+export default function BankDataCard({ status, isEmpty, onAddManually, onOpenReview, onOpenSpending, onChanged, showToast }) {
   const [busy, setBusy] = useState(false);
   const demoLoaded = !!status?.demo_loaded;
   const pending = status?.pending_review || 0;
@@ -69,6 +69,22 @@ export default function BankDataCard({ status, isEmpty, onAddManually, onOpenRev
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-emerald-300 group-hover:translate-x-1 transition-transform" />
+        </button>
+      )}
+
+      {onOpenSpending && (
+        <button
+          onClick={onOpenSpending}
+          className="w-full flex items-center justify-between rounded-2xl p-3.5 border border-indigo-500/40 bg-gradient-to-r from-indigo-950/60 to-slate-900 hover:border-indigo-400 transition-all cursor-pointer group"
+        >
+          <div className="flex items-center space-x-3 text-left">
+            <BarChart3 className="w-5 h-5 text-indigo-300" />
+            <div>
+              <p className="text-sm font-bold text-white">Spending dashboard</p>
+              <p className="text-[0.6875rem] text-indigo-200/80">Monthly totals and top merchants from your transactions</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-indigo-300 group-hover:translate-x-1 transition-transform" />
         </button>
       )}
 

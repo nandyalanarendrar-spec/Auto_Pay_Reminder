@@ -34,6 +34,20 @@ def _pending_count(uid: str) -> int:
     return res.count or 0
 
 
+@router.get("/spending", summary="Monthly spending totals and top merchants from the user's transactions")
+def bank_spending(months: int = Query(6, ge=1, le=24), current_user: dict = Depends(get_current_user)):
+    from app.services.spending_insights_service import SpendingInsightsService
+
+    return SpendingInsightsService.build(_uid(current_user), months=months)
+
+
+@router.get("/alerts", summary="Price hikes and trials that turned paid, found in the user's bank data")
+def bank_alerts(current_user: dict = Depends(get_current_user)):
+    from app.services.insight_alert_service import InsightAlertService
+
+    return {"alerts": InsightAlertService.get_alerts(_uid(current_user))}
+
+
 @router.get("/status", summary="Demo-data and review-list status for the signed-in user")
 def bank_status(current_user: dict = Depends(get_current_user)):
     uid = _uid(current_user)
